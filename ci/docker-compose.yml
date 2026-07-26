@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+  app:
+    image: stockhub-app:${GIT_SHA}
+    build: 
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      - API_URL
+      - APP_PUBLIC_URL=${APP_PUBLIC_URL:-/} # Default if unset or empty
+      - DEMO_JWT
+    ports: #HOST:CONTAINER
+      - ${APP_PORT}:80      
+    restart: unless-stopped
+    stdin_open: true #Workaround React app does not keep open

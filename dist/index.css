@@ -1,0 +1,15 @@
+﻿html {
+  background-color: #212121;
+  height: 100%;
+}
+
+body {
+  height: 100vh;
+  margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    background-color: #212121;
+  }
+}

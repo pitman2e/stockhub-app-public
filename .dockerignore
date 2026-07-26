@@ -1,0 +1,24 @@
+# Heavy / Environment-specific dependencies
+node_modules
+build
+dist
+
+# Local environment & secret files
+.env
+.env.dev
+.env.*
+
+# Git metadata
+.git
+.gitignore
+
+# Editor configuration files
+.vscode
+
+# Docker & CI files (not needed inside the build context)
+Dockerfile
+.dockerignore
+
+# Documentation & non-essential files
+README.md
+AGENTS.md
