@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run npm start (Dev)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run start"
+        },
+        {
+            "name": "Run npm start (Demo)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run start:demo"
+        }
+    ]
+}

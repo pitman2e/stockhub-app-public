@@ -1,0 +1,15 @@
+pipeline {
+    agent any
+    options {
+        // Jenkins ANSI Color Plugin: https://plugins.jenkins.io/ansicolor/
+        ansiColor('xterm')
+    }
+    
+    stages {
+        stage('UAT') {
+            steps {
+                sh './ci/build.pipeline.sh'
+            }
+        }
+    }
+}

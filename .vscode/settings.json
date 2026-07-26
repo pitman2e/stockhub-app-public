@@ -1,0 +1,7 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "npx @tanstack/intent@latest": true,
+        "npx vitest": true,
+        "npx tsc": true
+    }
+}
