@@ -1,0 +1,137 @@
+import * as utils from "../../utils/utils";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import FormHelperText from "@mui/material/FormHelperText";
+import FormControl from "@mui/material/FormControl";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import { type Resolver, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import SaveIcon from "@mui/icons-material/Save";
+import { useDispatch } from "react-redux";
+import { postSuccessMessage } from "../../redux/snackbarSlice";
+import { IApiActionResult, IRealisedScripPutDto, IRealisedScripPutDtoSchema } from "../../types/api";
+import { repoStockRealisedScrip } from "../../repo/repoStockRealisedScrip";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import repoRealisedDividend from "../../repo/repoRealisedDividend";
+import { AxiosError } from "axios";
+import { Dialog } from "@mui/material";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+
+interface IEditFormDividendProps {
+  onDialogClose: (data?: IRealisedScripPutDto) => void;
+  data: IRealisedScripPutDto;
+}
+
+export default function EditFormDividend({
+  onDialogClose,
+  data,
+}: IEditFormDividendProps) {
+  const {
+    register,
+    handleSubmit,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<IRealisedScripPutDto>({
+    resolver: yupResolver(IRealisedScripPutDtoSchema) as Resolver<IRealisedScripPutDto>,
+  });
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+  const saveMutation = useMutation({
+    mutationFn: async (formData: IRealisedScripPutDto) => ({
+      response: await ApiRequestAdapter.mutationOptions(repoStockRealisedScrip.Put()).requestFn(formData),
+      invalidateQueryKey: ApiRequestAdapter.mutationOptions(repoStockRealisedScrip.Put()).invalidateQueryKey,
+    }),
+    onSuccess: async ({ invalidateQueryKey }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: invalidateQueryKey }),
+        queryClient.invalidateQueries({
+          queryKey: ApiRequestAdapter.queryOptions(repoRealisedDividend.Get()).invalidateQueryKey,
+        }),
+      ]);
+      dispatch(postSuccessMessage(""));
+      onDialogClose(saveMutation.variables);
+    },
+    onError: (error: AxiosError<IApiActionResult>) => {
+      utils.setFormErrorFromApiError(error, setError);
+    },
+  });
+
+  const onDialogSubmit = async (data: IRealisedScripPutDto) => {
+    await saveMutation.mutateAsync(data);
+  };
+
+  return (
+    <Dialog open={true} aria-labelledby="form-dialog-title">
+      <form onSubmit={handleSubmit(onDialogSubmit)}>
+        <DialogTitle id="form-dialog-title">
+          {!data ? "Add" : "Edit"} Scrip
+        </DialogTitle>
+        <DialogContent>
+          <FormControl error>
+            <input
+              type="hidden"
+              {...register("dividendId")}
+              value={data.dividendId}
+            ></input>
+            <input
+              type="hidden"
+              {...register("portfolioId")}
+              value={data.portfolioId}
+            ></input>
+
+            <TextField
+              autoFocus
+              margin="dense"
+              id="scripReceived"
+              label="Scrip Received"
+              defaultValue={data.scripReceived}
+              error={Boolean(errors.scripReceived)}
+              helperText={errors.scripReceived?.message?.toString()}
+              fullWidth
+              {...register("scripReceived", {
+                setValueAs: (value) => (value === "" || value === null ? null : Number(value)),
+              })}
+            />
+
+            <TextField
+              margin="dense"
+              id="reinvestPrice"
+              label="Reinvest Price"
+              defaultValue={data.reinvestPrice}
+              error={Boolean(errors.reinvestPrice)}
+              helperText={errors.reinvestPrice?.message?.toString()}
+              fullWidth
+              {...register("reinvestPrice", {
+                setValueAs: (value) => (value === "" || value === null ? null : Number(value)),
+              })}
+            />
+
+            <FormHelperText error id="component-error-text">
+              {errors.genericErrorMsg?.message}
+            </FormHelperText>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => onDialogClose()} color="primary">
+            Cancel
+          </Button>
+          {/*Note that type=submit for a HTML form*/}
+          <Button
+            type="submit"
+            loading={saveMutation.isPending}
+            loadingPosition="start"
+            onClick={() => clearErrors()}
+            startIcon={<SaveIcon />}
+            variant="outlined"
+          >
+            {!data ? "Add" : "Edit"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
+  );
+}
