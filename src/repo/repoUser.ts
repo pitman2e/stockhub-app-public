@@ -1,4 +1,4 @@
-import utils from "../utils/utils";
+import { createApiRequest } from "./apiRequest";
 
 export default class repoUser {
   static readonly baseUrl = "api/User";
@@ -6,9 +6,6 @@ export default class repoUser {
   static Ping() {
     const baseUrl = repoUser.baseUrl + "/Ping";
 
-    return {
-      requestFn: () => utils.requestWithToken("POST", baseUrl),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest(baseUrl, baseUrl, "POST");
   }
 }

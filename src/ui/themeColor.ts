@@ -1,7 +1,7 @@
 import { blue } from "@mui/material/colors";
 
 const themeColor = {
-    primary: blue
+  primary: blue
 };
 
 export default themeColor;

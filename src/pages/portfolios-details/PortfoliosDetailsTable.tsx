@@ -7,7 +7,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import TablePagination from "@mui/material/TablePagination";
 import TextField from "@mui/material/TextField";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -15,7 +15,7 @@ import {
   DefaultPaper,
   DefaultLinearProgress,
 } from "../../components/DefaultComponents";
-import { Grid, Tooltip } from "@mui/material";
+import { Grid } from "@mui/material";
 import TableSkeletonCells from "../../components/TableSkeletonCells";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
@@ -23,7 +23,6 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import IconButton from "@mui/material/IconButton";
-import Dialog from "@mui/material/Dialog";
 import ConfirmationDialogWrapper from "../../components/ConfirmationDialogWrapper";
 import EditFormPortfolio from "./EditFormPortfolio";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,7 +32,8 @@ import {
   postSuccessMessage,
 } from "../../redux/snackbarSlice";
 import repoPortfolio from "../../repo/repoPortfolio";
-import { IStockSummary } from "../../types/api";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+import { IApiActionResult, IStockSummary } from "../../types/api";
 import {
   columnVisibilityFeature,
   columnFilteringFeature,
@@ -47,8 +47,8 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
-import { width } from "@mui/system";
 import QuickSearchUtils from "../../utils/quickSearchUtils";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 
 const sx_tableCellNumeric = {
   textAlign: "right",
@@ -75,36 +75,9 @@ const columnHelper = createColumnHelper<
   typeof tableFeaturesConfig,
   IStockSummary
 >();
-type IStockSummaryColumnKey = keyof IStockSummary;
-
-const numericColumnIds = new Set<IStockSummaryColumnKey>([
-  "totalCost",
-  "totalUnrealisedAmount",
-  "totalRealisedAmount",
-  "totalDividend",
-  "totalRealisedGain",
-  "totalUnrealisedGain",
-  "curTxGainAmount",
-]);
-
-const getCellSx = (
-  columnId: IStockSummaryColumnKey,
-  row: IStockSummary,
-) => ({
-  ...(numericColumnIds.has(columnId) ? sx_tableCellNumeric : {}),
-  ...(columnId === "totalRealisedGain"
-    ? utils.getColorClass(row.totalRealisedGain)
-    : {}),
-  ...(columnId === "totalUnrealisedGain"
-    ? utils.getColorClass(row.totalUnrealisedGain)
-    : {}),
-  ...(columnId === "curTxGainAmount"
-    ? utils.getColorClass(row.curTxGainAmount)
-    : {}),
-});
 
 interface IPortfoliosDetailsTableProps {
-  recordPerPage?: number | undefined;
+  recordPerPage?: number;
 }
 
 export default function PortfoliosDetailsTable({
@@ -125,7 +98,7 @@ export default function PortfoliosDetailsTable({
   const dispatch = useDispatch();
   const deleteMutation = useMutation({
     mutationFn: async ({ portfolioId }: { portfolioId: string }) => {
-      const deleteQuery = repoPortfolio.Delete({ portfolioId });
+      const deleteQuery = ApiRequestAdapter.mutationOptions(repoPortfolio.Delete({ portfolioId }));
       return {
         response: await deleteQuery.requestFn(),
         invalidateQueryKey: deleteQuery.invalidateQueryKey,
@@ -135,7 +108,7 @@ export default function PortfoliosDetailsTable({
       dispatch(postSuccessMessage(""));
       await queryClient.invalidateQueries({ queryKey: invalidateQueryKey });
     },
-    onError: (error: AxiosError<any>) => {
+    onError: (error: AxiosError<IApiActionResult>) => {
       dispatch(postErrorMessage(utils.getApiErrorMessage(error)));
     },
   });
@@ -146,10 +119,16 @@ export default function PortfoliosDetailsTable({
   }
 
   const { isSuccess, isError, data, isFetching } = useQuery(
-    repoPortfolio.GetSummary(),
+    ApiRequestAdapter.queryOptions(repoPortfolio.GetSummary()),
   );
 
-  if (isError)
+  const availablePortfolios = isSuccess
+    ? [...data.details, ...data.closedDetails]
+      .map((summary) => summary.portfolio)
+      .filter((portfolio) => !portfolio.isVirtual)
+    : [];
+
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -176,11 +155,13 @@ export default function PortfoliosDetailsTable({
   const columns = useMemo(
     () =>
       columnHelper.columns([
-        columnHelper.accessor("portfolioName", {
+        columnHelper.accessor((row) => row.portfolio.name, {
+          id: "portfolioName",
           header: "Name",
         }),
         columnHelper.accessor("totalCost", {
           header: "Cost",
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <Typography variant="body1">
               <Typography variant="caption">
@@ -192,6 +173,7 @@ export default function PortfoliosDetailsTable({
         }),
         columnHelper.accessor("totalUnrealisedAmount", {
           header: "Unrealised Amount",
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <Typography variant="body1">
               <Typography variant="caption">
@@ -203,6 +185,7 @@ export default function PortfoliosDetailsTable({
         }),
         columnHelper.accessor("totalRealisedAmount", {
           header: "Realised Amount",
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <Typography variant="body1">
               <Typography variant="caption">
@@ -214,6 +197,7 @@ export default function PortfoliosDetailsTable({
         }),
         columnHelper.accessor("totalDividend", {
           header: "Realised Dividend",
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <Typography variant="body1">
               <Typography variant="caption">
@@ -225,6 +209,7 @@ export default function PortfoliosDetailsTable({
         }),
         columnHelper.accessor("totalRealisedGain", {
           header: "Realised Gain",
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -247,6 +232,7 @@ export default function PortfoliosDetailsTable({
         }),
         columnHelper.accessor("totalUnrealisedGain", {
           header: "Unrealised Gain",
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -269,6 +255,7 @@ export default function PortfoliosDetailsTable({
         }),
         columnHelper.accessor("curTxGainAmount", {
           header: "Daily Gain",
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -296,37 +283,36 @@ export default function PortfoliosDetailsTable({
             const d = row.original;
             return (
               <Grid container wrap="nowrap" sx={{ alignItems: "center" }}>
-                <Tooltip title="Edit" aria-label="Edit">
-                  <IconButton
-                    size="small"
-                    aria-label="edit"
-                    sx={sx_iconButton}
-                    disabled={isFetching}
-                    onClick={() => setDialogState({ isOpen: true, content: d })}
-                  >
-                    <EditIcon fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  size="small"
+                  aria-label="edit"
+                  sx={sx_iconButton}
+                  disabled={isFetching}
+                  onClick={() => setDialogState({ isOpen: true, content: d })}
+                >
+                  <EditIcon fontSize="inherit" />
+                </IconButton>
                 <ConfirmationDialogWrapper
                   disabled={isFetching}
-                  WrappingComponent={(props) => (
-                    <Tooltip title="Delete" aria-label="Delete">
-                      <IconButton
-                        size="small"
-                        aria-label="delete"
-                        sx={sx_iconButton}
-                        disabled={props.disabled}
-                        onClick={props.onClick}
-                      >
-                        <DeleteIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
+                  WrappingComponent={({ disabled, onClick }: {
+                    onClick: () => void;
+                    disabled?: boolean;
+                  }) => (
+                    <IconButton
+                      size="small"
+                      aria-label="delete"
+                      sx={sx_iconButton}
+                      disabled={disabled}
+                      onClick={onClick}
+                    >
+                      <DeleteIcon fontSize="inherit" />
+                    </IconButton>
                   )}
                   title="Confirmation"
                   description="Are you sure to delete this record ?"
                   onDialogConfirm={async () => {
                     await deleteMutation.mutateAsync({
-                      portfolioId: d.portfolioId,
+                      portfolioId: d.portfolio.portfolioId,
                     });
                   }}
                 />
@@ -347,6 +333,8 @@ export default function PortfoliosDetailsTable({
     onPaginationChange: setPagination,
     globalFilterFn: "includesString" as const,
     getColumnCanGlobalFilter: (column) => column.id === "portfolioName",
+    getRowId: (row) => [row.portfolio.portfolioId].join("|"),
+    autoResetPageIndex: true,
   });
 
   const quickSearchRef = useRef<HTMLInputElement | null>(null);
@@ -387,7 +375,7 @@ export default function PortfoliosDetailsTable({
         <Grid container sx={{ justifyContent: "space-between" }}>
           <Grid size="grow">
             <Typography variant="h6" gutterBottom>
-              Details
+              Details {isError && <ImminentErrorIcon />}
             </Typography>
           </Grid>
         </Grid>
@@ -402,7 +390,6 @@ export default function PortfoliosDetailsTable({
                 disabled={posStatus === POS_STATUS_OPEN}
                 onClick={() => {
                   setPosStatus(POS_STATUS_OPEN);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               >
                 Open
@@ -411,7 +398,6 @@ export default function PortfoliosDetailsTable({
                 disabled={posStatus === POS_STATUS_CLOSED}
                 onClick={() => {
                   setPosStatus(POS_STATUS_CLOSED);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               >
                 Closed
@@ -420,7 +406,6 @@ export default function PortfoliosDetailsTable({
                 disabled={posStatus === POST_STATUS_VIRTUAL}
                 onClick={() => {
                   setPosStatus(POST_STATUS_VIRTUAL);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               >
                 Virtual
@@ -438,21 +423,18 @@ export default function PortfoliosDetailsTable({
                 value={globalFilter}
                 onChange={(event) => {
                   table.setGlobalFilter(event.target.value);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               />
             </Grid>
 
             <Grid>
-              <Tooltip title="Add" aria-label="Add">
-                <IconButton
-                  onClick={() => {
-                    setDialogState({ isOpen: true, content: null });
-                  }}
-                >
-                  <AddIcon />
-                </IconButton>
-              </Tooltip>
+              <IconButton
+                onClick={() => {
+                  setDialogState({ isOpen: true, content: null });
+                }}
+              >
+                <AddIcon />
+              </IconButton>
             </Grid>
           </Grid>
         </Grid>
@@ -466,7 +448,7 @@ export default function PortfoliosDetailsTable({
                     <TableCell
                       key={header.id}
                       sx={
-                        numericColumnIds.has(header.column.id as IStockSummaryColumnKey)
+                        header.column.columnDef.meta?.isNumeric
                           ? sx_tableCellNumeric
                           : undefined
                       }
@@ -491,14 +473,20 @@ export default function PortfoliosDetailsTable({
               {isSuccess &&
                 rows.map((row) => (
                   <TableRow hover key={row.id}>
-                    {row.getAllCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        sx={getCellSx(cell.column.id as IStockSummaryColumnKey, row.original)}
-                      >
-                        <table.FlexRender cell={cell} />
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            ...(meta?.isNumeric ? sx_tableCellNumeric : {}),
+                            ...(meta?.isGainLoss ? utils.getColorClass(cell.getValue() as number) : {}),
+                          }}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))}
               {emptyRowsCount > 0 && (
@@ -526,12 +514,12 @@ export default function PortfoliosDetailsTable({
           }}
         />
       </DefaultPaper >
-      <Dialog open={dialogState.isOpen} aria-labelledby="form-dialog-title">
+      {dialogState.isOpen &&
         <EditFormPortfolio
           onDialogClose={() => setDialogState({ isOpen: false, content: null })}
           data={dialogState.content}
-        />
-      </Dialog>
+          availablePortfolios={availablePortfolios}
+        />}
     </>
   );
 }

@@ -11,4 +11,4 @@ cd "$SCRIPT_DIR"
 #export APP_PORT=
 #export APP_PUBLIC_URL=/
 export GIT_SHA=$(git rev-parse --short HEAD)
-docker-compose -f docker-compose.yml up --build -d
+docker compose -f docker-compose.yml up --build -d

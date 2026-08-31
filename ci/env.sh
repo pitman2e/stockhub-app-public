@@ -13,3 +13,7 @@ echo "window.__ENV__ = {" >> $ENV_FILE
 echo "  API_URL: \"$API_URL\"," >> $ENV_FILE
 echo "  DEMO_JWT: \"$DEMO_JWT\"," >> $ENV_FILE
 echo "};" >> $ENV_FILE
+
+# Replace the base href in index.html with the value of APP_PUBLIC_URL runtime environment variable
+sed -i "s|<base href=\"\./\" />|<base href=\"${APP_PUBLIC_URL}\" />|" \
+    /usr/share/nginx/html/index.html

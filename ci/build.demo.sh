@@ -13,5 +13,5 @@ export GIT_SHA=$(git rev-parse --short HEAD)
 export DEMO_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJURVNUX1VJRCIsImVtYWlsIjoiVEVTVF9VSURAbG9jYWxob3N0LmNvbSIsImp0aSI6IjZhNTJkZWY1LThiN2MtNGE0OC04ZjdjLTZhY2E1YmUwMTgzMiIsImlzcyI6IlN0b2NrSHViIiwiYXVkIjoiU3RvY2tIdWJDbGllbnQiLCJleHAiOjIxMDE2NDg3ODB9.ZNQNovddmvnHo3aCcJHiebfiORmpMfLYEWR1WkmdEnU
 GENERATE_SOURCEMAP=false
 
-docker-compose -f docker-compose.yml up --build
-docker-compose -f docker-compose.yml down --rmi local
+docker compose -f docker-compose.yml up --build
+docker compose -f docker-compose.yml down --rmi local

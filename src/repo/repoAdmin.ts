@@ -1,35 +1,26 @@
-import utils from "../utils/utils";
+import { createApiRequest } from "./apiRequest";
 
 export class repoAdmin {
-    static readonly baseUrl = "api/Admin";
+  static readonly baseUrl = "api/Admin";
 
-    static CrawlStockPrice_OnDemand() {
-        const baseUrl = repoAdmin.baseUrl;
-        const url = `${baseUrl}/CrawlStockPrice_OnDemand`;
+  static CrawlStockPrice_OnDemand() {
+    const baseUrl = repoAdmin.baseUrl;
+    const url = `${baseUrl}/CrawlStockPrice_OnDemand`;
 
-        return {
-            requestFn: () => utils.requestWithToken('GET', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-        };
-    }
+    return createApiRequest(baseUrl, url, "GET");
+  }
 
-    static RecalculateDivPayAdjustment() {
-        const baseUrl = repoAdmin.baseUrl;
-        const url = `${baseUrl}/RecalculateDivPayAdjustment`;
+  static RecalculateDivPayAdjustment() {
+    const baseUrl = repoAdmin.baseUrl;
+    const url = `${baseUrl}/RecalculateDivPayAdjustment`;
 
-        return {
-            requestFn: () => utils.requestWithToken('GET', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-        };
-    }
+    return createApiRequest(baseUrl, url, "GET");
+  }
 
-    static UpdatePositionDb() {
-        const baseUrl = repoAdmin.baseUrl;
-        const url = `${baseUrl}/UpdatePositionDb`;
+  static UpdatePositionDb() {
+    const baseUrl = repoAdmin.baseUrl;
+    const url = `${baseUrl}/UpdatePositionDb`;
 
-        return {
-            requestFn: () => utils.requestWithToken('GET', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-        };
-    }
+    return createApiRequest(baseUrl, url, "GET");
+  }
 }

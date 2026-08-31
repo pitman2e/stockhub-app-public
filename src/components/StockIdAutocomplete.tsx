@@ -3,6 +3,7 @@ import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
 import repoStocks from "../repo/repoStocks";
+import ApiRequestAdapter from "../adapters/apiRequestAdapter";
 import { IStock } from "../types/db";
 import { useQuery } from "@tanstack/react-query";
 
@@ -31,7 +32,7 @@ export default function StockIdAutocomplete({
 }: IStockIdAutocompleteProps) {
   const [open, setOpen] = React.useState(false);
   const { data, isLoading } = useQuery(
-    repoStocks.Get({ portfolioId, isOpenPosOnly, isOrderByPosVal }),
+    ApiRequestAdapter.queryOptions(repoStocks.Get({ portfolioId, isOpenPosOnly, isOrderByPosVal })),
   );
 
   return (

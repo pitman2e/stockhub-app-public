@@ -1,0 +1,136 @@
+import { describe, it, expect } from 'vitest';
+import { AxiosError } from 'axios';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import * as utils from "../../utils/utils";
+import { getPresetDates } from '../../components/DateRangeSelector';
+import { IApiActionResult } from '../../types/api';
+
+dayjs.extend(utc);
+
+describe('utils.getQueryStringFromDict', () => {
+  it('builds a URL query string from defined object values and omits null/undefined', () => {
+    const query = {
+      symbol: 'AAPL',
+      limit: 10,
+      showInactive: false,
+      filter: null,
+      page: undefined,
+    };
+
+    const result = utils.getQueryStringFromDict(query);
+
+    expect(result).toBe('symbol=AAPL&limit=10&showInactive=false');
+  });
+
+  it('encodes keys and values correctly', () => {
+    const query = {
+      'search term': 'hello world',
+      'special&key': 'a+b=c',
+    };
+
+    const result = utils.getQueryStringFromDict(query);
+
+    expect(result).toBe('search%20term=hello%20world&special%26key=a%2Bb%3Dc');
+  });
+});
+
+describe('utils.setFormErrorFromApiError', () => {
+  it('maps hook errors to their form fields and falls back to a generic error message', () => {
+    const fieldErrors: Record<string, { type: string; message: string }> = {};
+    const setFieldError = (fieldName: string, error: { type?: string; message?: string }) => {
+      fieldErrors[fieldName] = {
+        type: error.type ?? 'manual',
+        message: error.message ?? '',
+      };
+    };
+
+    const hookError = new AxiosError<IApiActionResult>('request failed');
+    hookError.response = {
+      data: {
+        hookErrors: [{ fieldName: 'stockName', message: 'Stock name is required' }],
+      },
+    } as NonNullable<AxiosError<IApiActionResult>>['response'];
+
+    utils.setFormErrorFromApiError(hookError, setFieldError);
+
+    expect(fieldErrors.stockName).toEqual({
+      type: 'manual',
+      message: 'Stock name is required',
+    });
+
+    const genericErrors: Record<string, { type: string; message: string }> = {};
+    const setGenericError = (fieldName: string, error: { type?: string; message?: string }) => {
+      genericErrors[fieldName] = {
+        type: error.type ?? 'manual',
+        message: error.message ?? '',
+      };
+    };
+
+    const fallbackError = new AxiosError<IApiActionResult>('request failed');
+    fallbackError.response = {
+      data: {
+        message: 'Server rejected input. Please verify',
+      },
+    } as NonNullable<AxiosError<IApiActionResult>>['response'];
+
+    utils.setFormErrorFromApiError(fallbackError, setGenericError);
+
+    expect(genericErrors.genericErrorMsg).toEqual({
+      type: 'manual',
+      message: 'Server rejected input. Please verify',
+    });
+  });
+});
+
+describe('DateRangeSelector.getPresetDates', () => {
+  it('supports dynamically generated date windows like 2D, 3W and 4Y', () => {
+    const today = dayjs.utc();
+
+    expect(getPresetDates('2D').from?.isSame(today.subtract(2, 'day'), 'day')).toBe(true);
+    expect(getPresetDates('2D').to?.isSame(today.endOf('day'), 'day')).toBe(true);
+
+    expect(getPresetDates('3W').from?.isSame(today.subtract(3, 'week'), 'day')).toBe(true);
+    expect(getPresetDates('3W').to?.isSame(today.endOf('day'), 'day')).toBe(true);
+
+    expect(getPresetDates('4Y').from?.isSame(today.subtract(4, 'year'), 'day')).toBe(true);
+    expect(getPresetDates('4Y').to?.isSame(today.endOf('day'), 'day')).toBe(true);
+  });
+});
+
+describe('utils.toCamelCase', () => {
+  it('converts standard snake_case strings to camelCase', () => {
+    expect(utils.toCamelCase('user_first_name')).toBe('userFirstName');
+    expect(utils.toCamelCase('hello_world_id')).toBe('helloWorldId');
+  });
+
+  it('handles uppercase snake_case constants', () => {
+    expect(utils.toCamelCase('API_KEY')).toBe('apiKey');
+    expect(utils.toCamelCase('USER_FIRST_NAME')).toBe('userFirstName');
+  });
+
+  it('handles strings containing numbers', () => {
+    expect(utils.toCamelCase('user_1_details')).toBe('user1Details');
+    expect(utils.toCamelCase('item_20_count')).toBe('item20Count');
+  });
+
+  it('handles single words without underscores', () => {
+    expect(utils.toCamelCase('hello')).toBe('hello');
+    expect(utils.toCamelCase('WORLD')).toBe('world');
+  });
+
+  it('handles empty strings', () => {
+    expect(utils.toCamelCase('')).toBe('');
+  });
+
+  it('camelCase is untouched', () => {
+    expect(utils.toCamelCase('txCount')).toBe('txCount');
+    expect(utils.toCamelCase('txCountCount')).toBe('txCountCount');
+  });
+
+  it('handles multiple sequence underscores and edge positions', () => {
+    expect(utils.toCamelCase('multiple_words_in_a_row')).toBe('multipleWordsInARow');
+    expect(utils.toCamelCase('_leading_underscore')).toBe('LeadingUnderscore');
+    expect(utils.toCamelCase('trailing_underscore_')).toBe('trailingUnderscore_');
+  });
+});

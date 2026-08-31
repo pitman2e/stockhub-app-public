@@ -10,6 +10,7 @@ import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import repoStocks from "../../repo/repoStocks";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 import {
   DefaultErrorPlaceholder,
   DefaultPaper,
@@ -18,11 +19,10 @@ import {
 import Grid from "@mui/material/Grid";
 import AddIcon from "@mui/icons-material/Add";
 import IconButton from "@mui/material/IconButton";
-import Dialog from "@mui/material/Dialog";
-import StockEditForm from "./EditFormStock";
+import EditFormStock from "./EditFormStock";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import StockTickerLink from "../../components/StockTickerLink";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -39,16 +39,22 @@ import {
   columnFilteringFeature,
   createFilteredRowModel,
   createPaginatedRowModel,
+  createSortedRowModel,
   createColumnHelper,
   filterFn_includesString,
   globalFilteringFeature,
   rowPaginationFeature,
+  rowSortingFeature,
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
-import { Tooltip } from "@mui/material";
+import { TableSortLabel } from "@mui/material";
 import QuickSearchUtils from "../../utils/quickSearchUtils";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
+import { ISortBy } from "../../types/table";
+import { TableHeaderSortDef } from "../../utils/tableHeaderSortDef";
+import { IApiActionResult } from "../../types/api";
 
 const sx_iconButton = {
   padding: 0,
@@ -59,15 +65,17 @@ const tableFeaturesConfig = tableFeatures({
   columnVisibilityFeature,
   columnFilteringFeature,
   globalFilteringFeature,
+  rowSortingFeature,
   rowPaginationFeature,
   filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
   paginatedRowModel: createPaginatedRowModel(),
   filterFns: { includesString: filterFn_includesString },
 });
 const columnHelper = createColumnHelper<typeof tableFeaturesConfig, IStock>();
 
 interface IStocksTableProps {
-  recordPerPage?: number | undefined;
+  recordPerPage?: number;
   assetClasses: string[];
 }
 
@@ -80,6 +88,10 @@ export default function StocksTable({
     pageSize: recordPerPage === undefined ? 25 : recordPerPage,
   });
   const [globalFilter, setGlobalFilter] = useState("");
+  const [sortBy, setSortBy] = useState<ISortBy>({
+    colName: null,
+    isDesc: false,
+  });
   const pagePerRowOptions = [25, 50, 100, 250, 500];
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [toEditData, setToEditData] = useState<IStock | null>(null);
@@ -87,9 +99,9 @@ export default function StocksTable({
   const dispatch = useDispatch();
   const deleteMutation = useMutation({
     mutationFn: async ({ stockId }: { stockId: string }) => {
-      const deleteQuery = repoStocks.Delete({ stockId });
+      const deleteQuery = ApiRequestAdapter.mutationOptions(repoStocks.Delete());
       return {
-        response: await deleteQuery.requestFn(),
+        response: await deleteQuery.requestFn({ stockId }),
         invalidateQueryKey: deleteQuery.invalidateQueryKey,
       };
     },
@@ -97,7 +109,7 @@ export default function StocksTable({
       dispatch(postSuccessMessage(""));
       await queryClient.invalidateQueries({ queryKey: invalidateQueryKey });
     },
-    onError: (error: AxiosError<any>) => {
+    onError: (error: AxiosError<IApiActionResult>) => {
       dispatch(postErrorMessage(utils.getApiErrorMessage(error)));
     },
   });
@@ -107,10 +119,10 @@ export default function StocksTable({
     pagePerRowOptions.sort((a, b) => a - b); //By default javascript sort likes a string
   }
 
-  const dataQuery = repoStocks.Get({
+  const dataQuery = ApiRequestAdapter.queryOptions(repoStocks.Get({
     isOrderByPosVal: true,
     assetClasses: assetClasses.join(","),
-  });
+  }));
 
   const { isSuccess, isError, data, isFetching } = useQuery(dataQuery);
 
@@ -118,7 +130,7 @@ export default function StocksTable({
     setIsDialogOpen(false);
   };
 
-  if (isError)
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -126,34 +138,76 @@ export default function StocksTable({
     );
 
   const columns = useMemo(
-    () =>
-      columnHelper.columns([
+    () => {
+      const tableHeaderSortDef = new TableHeaderSortDef(setSortBy);
+      return columnHelper.columns([
         columnHelper.accessor("stockId", {
-          header: "Ticker Id",
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("stockId", sortBy)}>
+              Ticker Id
+            </TableSortLabel>
+          ),
           cell: ({ row }) => <StockTickerLink stockId={row.original.stockId} />,
         }),
-        columnHelper.accessor("stockName", { header: "Ticker Name" }),
-        columnHelper.accessor("assetClass", { header: "Asset Class" }),
-        columnHelper.accessor("currency", { header: "Currency" }),
+        columnHelper.accessor("stockName", {
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("stockName", sortBy)}>
+              Ticker Name
+            </TableSortLabel>
+          ),
+        }),
+        columnHelper.accessor("assetClass", {
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("assetClass", sortBy)}>
+              Asset Class
+            </TableSortLabel>
+          ),
+        }),
+        columnHelper.accessor("currency", {
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("currency", sortBy)}>
+              Currency
+            </TableSortLabel>
+          ),
+        }),
         columnHelper.accessor("maturityDate", {
-          header: "Maturity Date",
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("maturityDate", sortBy)}>
+              Maturity Date
+            </TableSortLabel>
+          ),
           cell: ({ row }) =>
             row.original.maturityDate
               ? dayjs(row.original.maturityDate).format("YYYY-MM-DD")
               : "-",
         }),
         columnHelper.accessor("coupon", {
-          header: "Coupon",
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("coupon", sortBy)}>
+              Coupon
+            </TableSortLabel>
+          ),
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.coupon ? row.original.coupon + "%" : "-",
         }),
         columnHelper.accessor("couponFreq", {
-          header: "Coupon Freq",
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("couponFreq", sortBy)}>
+              Coupon Freq
+            </TableSortLabel>
+          ),
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.couponFreq ? row.original.couponFreq : "-",
         }),
         columnHelper.accessor("faceValue", {
-          header: "Face Value",
+          header: () => (
+            <TableSortLabel {...tableHeaderSortDef.get("faceValue", sortBy)}>
+              Face Value
+            </TableSortLabel>
+          ),
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.faceValue ? row.original.faceValue : "-",
         }),
@@ -164,34 +218,33 @@ export default function StocksTable({
             const stock = row.original;
             return (
               <Grid container wrap="nowrap">
-                <Tooltip title="Edit" aria-label="Edit">
-                  <IconButton
-                    size="small"
-                    sx={sx_iconButton}
-                    disabled={isFetching}
-                    onClick={() => {
-                      setIsDialogOpen(true);
-                      setToEditData(stock);
-                    }}
-                  >
-                    <EditIcon fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  size="small"
+                  sx={sx_iconButton}
+                  disabled={isFetching}
+                  onClick={() => {
+                    setIsDialogOpen(true);
+                    setToEditData(stock);
+                  }}
+                >
+                  <EditIcon fontSize="inherit" />
+                </IconButton>
 
                 <ConfirmationDialogWrapper
                   disabled={isFetching}
-                  WrappingComponent={(props) => (
-                    <Tooltip title="Delete" aria-label="Delete">
-                      <IconButton
-                        size="small"
-                        aria-label="delete"
-                        sx={sx_iconButton}
-                        disabled={props.disabled}
-                        onClick={props.onClick}
-                      >
-                        <DeleteIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
+                  WrappingComponent={({ disabled, onClick }: {
+                    onClick: () => void;
+                    disabled?: boolean;
+                  }) => (
+                    <IconButton
+                      size="small"
+                      aria-label="delete"
+                      sx={sx_iconButton}
+                      disabled={disabled}
+                      onClick={onClick}
+                    >
+                      <DeleteIcon fontSize="inherit" />
+                    </IconButton>
                   )}
                   title="Confirmation"
                   description="Are you sure to delete this record ?"
@@ -205,18 +258,26 @@ export default function StocksTable({
             );
           },
         }),
-      ]),
-    [isFetching, deleteMutation.mutateAsync],
+      ]);
+    },
+    [isFetching, deleteMutation.mutateAsync, sortBy],
   );
 
   const table = useTable({
     features: tableFeaturesConfig,
     columns,
-    data: isSuccess ? data : [],
-    state: { globalFilter, pagination },
+    data: data ?? [],
+    state: {
+      globalFilter,
+      pagination,
+      sorting: sortBy.colName
+        ? [{ id: sortBy.colName, desc: sortBy.isDesc }]
+        : [],
+    },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     globalFilterFn: "includesString" as const,
+    getRowId: (row) => [row.stockId].join("|"),
     getColumnCanGlobalFilter: (column) =>
       [
         "stockId",
@@ -225,6 +286,7 @@ export default function StocksTable({
         "currency",
         "maturityDate",
       ].includes(column.id),
+    autoResetPageIndex: true,
   });
 
   const quickSearchRef = useRef<HTMLInputElement | null>(null);
@@ -263,9 +325,9 @@ export default function StocksTable({
       {isFetching && <DefaultLinearProgress />}
       <DefaultPaper>
         <Grid container sx={{ justifyContent: "space-between" }}>
-          <Grid size= {{ xs: 12, sm: 'grow' }}>
+          <Grid size={{ xs: 12, sm: 'grow' }}>
             <Typography variant="h6" gutterBottom>
-              Details
+              Details {isError && <ImminentErrorIcon />}
             </Typography>
           </Grid>
 
@@ -279,22 +341,19 @@ export default function StocksTable({
                 value={globalFilter}
                 onChange={(event) => {
                   table.setGlobalFilter(event.target.value);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               />
             </Grid>
 
             <Grid>
-              <Tooltip title="Add" aria-label="Add">
-                <IconButton
-                  onClick={() => {
-                    setToEditData(null);
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <AddIcon />
-                </IconButton>
-              </Tooltip>
+              <IconButton
+                onClick={() => {
+                  setToEditData(null);
+                  setIsDialogOpen(true);
+                }}
+              >
+                <AddIcon />
+              </IconButton>
             </Grid>
           </Grid>
         </Grid>
@@ -305,7 +364,14 @@ export default function StocksTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableCell key={header.id}>
+                    <TableCell
+                      key={header.id}
+                      sx={
+                        header.column.columnDef.meta?.isNumeric
+                          ? { textAlign: "right" }
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder ? null : (
                         <table.FlexRender header={header} />
                       )}
@@ -326,8 +392,15 @@ export default function StocksTable({
               {isSuccess &&
                 rows.map((row) => (
                   <TableRow hover key={row.id}>
-                    {row.getAllCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={
+                          cell.column.columnDef.meta?.isNumeric
+                            ? { textAlign: "right" }
+                            : undefined
+                        }
+                      >
                         <table.FlexRender cell={cell} />
                       </TableCell>
                     ))}
@@ -358,12 +431,11 @@ export default function StocksTable({
           }}
         />
       </DefaultPaper>
-      <Dialog open={isDialogOpen} aria-labelledby="form-dialog-title">
-        <StockEditForm
+      {isDialogOpen &&
+        <EditFormStock
           onDialogClose={onDialogClose}
-          dialogUpdateContent={toEditData}
-        />
-      </Dialog>
+          content={toEditData}
+        />}
     </>
   );
 }

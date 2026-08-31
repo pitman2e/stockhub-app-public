@@ -1,6 +1,6 @@
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import StockPortfoliosDetailsTable from "./PortfoliosDetailsTable";
 import {
   DefaultHeader,

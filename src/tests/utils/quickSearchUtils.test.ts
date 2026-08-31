@@ -1,6 +1,6 @@
 // quickSearchUtils.test.ts
 import { describe, it, expect, afterEach } from 'vitest';
-import QuickSearchUtils from "../utils/quickSearchUtils";
+import QuickSearchUtils from "../../utils/quickSearchUtils";
 
 describe('QuickSearchUtils', () => {
   afterEach(() => {

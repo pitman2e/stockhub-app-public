@@ -1,10 +1,10 @@
 import { IStock } from "../types/db";
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString, getApiRoute } from "./apiRequest";
 
 export default class repoStocks {
-    static readonly baseUrl = "api/Stocks";
+  static readonly baseUrl = "api/Stocks";
 
-    static Get({ portfolioId, stockId, isOpenPosOnly, isOrderByPosVal, assetClasses }:
+  static Get({ portfolioId, stockId, isOpenPosOnly, isOrderByPosVal, assetClasses }:
         {
             portfolioId?: string | null;
             stockId?: string | null;
@@ -12,49 +12,29 @@ export default class repoStocks {
             isOrderByPosVal?: boolean | null;
             assetClasses?: string | null
         } = {}
-    ) {
-        const baseUrl = repoStocks.baseUrl;
-        const url = baseUrl + "/" + utils.getQueryRoute(portfolioId) +
-            "?" + utils.getQueryStringFromDict({ stockId, isOrderByPosVal, assetClasses, isOpenPosOnly });
+  ) {
+    const baseUrl = repoStocks.baseUrl;
+    const url = baseUrl + "/" + getApiRoute(portfolioId) +
+            "?" + getApiQueryString({ stockId, isOrderByPosVal, assetClasses, isOpenPosOnly });
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl, portfolioId, stockId, isOpenPosOnly, isOrderByPosVal, assetClasses }),
-            queryFn: utils.getReactQueryFn<IStock[]>(url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
-    }
+    return createApiRequest<IStock[]>(baseUrl, url);
+  }
 
-    static Post() {
-        const baseUrl = repoStocks.baseUrl;
+  static Post() {
+    const baseUrl = repoStocks.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('POST', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
-    }
+    return createApiRequest(baseUrl, baseUrl, "POST");
+  }
 
-    static Put() {
-        const baseUrl = repoStocks.baseUrl;
+  static Put() {
+    const baseUrl = repoStocks.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('PUT', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
-    }
+    return createApiRequest(baseUrl, baseUrl, "PUT");
+  }
 
-    static Delete(
-        {
-            stockId,
-        }: {
-            stockId: string;
-        }
-    ) {
-        const baseUrl = repoStocks.baseUrl;
-        const url = baseUrl + "/" + utils.getQueryRoute(stockId);
-        return {
-            requestFn: () => utils.requestWithToken('DELETE', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
-    }
+  static Delete() {
+    const baseUrl = repoStocks.baseUrl;
+
+    return createApiRequest(baseUrl, baseUrl, "DELETE");
+  }
 }

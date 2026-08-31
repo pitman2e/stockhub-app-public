@@ -3,37 +3,27 @@ import {
   IWatchlistDeleteDto,
   IWatchlistPostDto,
 } from "../types/api";
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString } from "./apiRequest";
 
 export default class repoWatchlist {
   static readonly baseUrl = "api/Watchlist";
 
   static Get({ topCnt }: { topCnt?: number | null }) {
     const baseUrl = repoWatchlist.baseUrl;
-    const url = baseUrl + "?" + utils.getQueryStringFromDict({ topCnt });
+    const url = baseUrl + "?" + getApiQueryString({ topCnt });
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl, topCnt }),
-      queryFn: utils.getReactQueryFn<IStockMovements>(url),
-    };
+    return createApiRequest<IStockMovements>(baseUrl, url);
   }
 
   static Delete(content: IWatchlistDeleteDto) {
     const baseUrl = repoWatchlist.baseUrl;
 
-    return {
-      requestFn: () => utils.requestWithToken("DELETE", baseUrl, content),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest(baseUrl, baseUrl, "DELETE", content);
   }
 
   static Post(content: IWatchlistPostDto) {
     const baseUrl = repoWatchlist.baseUrl;
 
-    return {
-      requestFn: () => utils.requestWithToken("POST", baseUrl, content),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest(baseUrl, baseUrl, "POST", content);
   }
 }

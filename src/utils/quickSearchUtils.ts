@@ -38,8 +38,8 @@ export default class QuickSearchUtils {
       activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement
         ? activeElement
         : quickSearchElement instanceof HTMLInputElement || quickSearchElement instanceof HTMLTextAreaElement
-        ? quickSearchElement
-        : quickSearchElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
+          ? quickSearchElement
+          : quickSearchElement?.querySelector<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
 
     // Do not blur if the user has already typed text into the field
     if (inputElement && inputElement.value !== '') {
@@ -50,16 +50,16 @@ export default class QuickSearchUtils {
   }
 
   static isQuickSearchFocused(quickSearchElement?: HTMLElement | null): boolean {
-  if (!quickSearchElement || typeof document === "undefined" || !document.activeElement) {
-    return false;
-  }
+    if (!quickSearchElement || typeof document === "undefined" || !document.activeElement) {
+      return false;
+    }
 
-  const activeElement = document.activeElement;
-  return (
-    activeElement === quickSearchElement ||
+    const activeElement = document.activeElement;
+    return (
+      activeElement === quickSearchElement ||
     quickSearchElement.contains(activeElement)
-  );
-}
+    );
+  }
 
   static shouldHandleQuickSearchKey(
     event: Pick<KeyboardEvent, 'key' | 'target' | 'defaultPrevented' | 'ctrlKey' | 'metaKey' | 'altKey'>,
