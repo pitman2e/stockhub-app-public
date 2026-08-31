@@ -13,7 +13,6 @@ import {
   DefaultErrorPlaceholder,
 } from "../../components/DefaultComponents";
 import MarketSelect from "../../components/MarketSelect";
-import { Stack } from "@mui/system";
 
 export function MDividends() {
   const { portfolioId } = useParams();
@@ -29,41 +28,38 @@ export function MDividends() {
       <DefaultContainer key={portfolioId}>
         <DefaultHeader title="Dividends" />
 
-        <Stack spacing={1}>
-          <DefaultPaper>
-            <Grid container spacing={1}>
-              <Grid size={{ xs: 12 }}>
-                <Typography variant="h6" gutterBottom>
-                  Filtering
-                </Typography>
-              </Grid>
+        <Grid container spacing={1}>
+          <Grid size={{ xs: 12 }}>
+            <DefaultPaper>
+              <Typography variant="h6" gutterBottom>
+                Filtering
+              </Typography>
 
-              <Grid size={{ xs: 8 }}>
-                <StockIdAutocomplete
-                  portfolioId={portfolioId}
-                  SetStateAction={setFilterStockId}
-                />
-              </Grid>
+              <Grid container spacing={1}>
+                <Grid size={{ xs: 8 }}>
+                  <StockIdAutocomplete
+                    portfolioId={portfolioId}
+                    SetStateAction={setFilterStockId}
+                  />
+                </Grid>
 
-              <Grid size={{ xs: 4 }}>
-                <MarketSelect SetStateAction={setFilterMarket} />
+                <Grid size={{ xs: 4 }}>
+                  <MarketSelect SetStateAction={setFilterMarket} />
+                </Grid>
               </Grid>
-            </Grid>
-          </DefaultPaper>
-
-          <Grid>
-            <Grid size={{ xs: 12 }}>
-              <RealisedDividendTable
-                key={filterStockId}
-                portfolioId={portfolioId}
-                filterStockId={filterStockId}
-                filterMarket={filterMarket}
-                isShowPortfolioId={!portfolioId}
-              />
-            </Grid>
+            </DefaultPaper>
           </Grid>
-        </Stack>
+
+          <Grid size={{ xs: 12 }}>
+            <RealisedDividendTable
+              key={filterStockId}
+              portfolioId={portfolioId}
+              filterStockId={filterStockId}
+              filterMarket={filterMarket}
+            />
+          </Grid>
+        </Grid>
       </DefaultContainer>
-    </ErrorBoundary>
+    </ErrorBoundary >
   );
 }

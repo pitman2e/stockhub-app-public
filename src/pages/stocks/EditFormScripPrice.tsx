@@ -4,17 +4,20 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormHelperText from "@mui/material/FormHelperText";
 import TextField from "@mui/material/TextField";
-import { useForm } from "react-hook-form";
+import { type Resolver, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import Button from "@mui/material/Button";
 import SaveIcon from "@mui/icons-material/Save";
 import { useDispatch } from "react-redux";
 import utils from "../../utils/utils";
 import { postSuccessMessage } from "../../redux/snackbarSlice";
 import { IBaseDto, IStockDividend } from "../../types/db";
-import { IDividendPutDto } from "../../types/api";
+import { IDividendPutDto, IDividendPutDtoSchema } from "../../types/api";
 import repoDividend from "../../repo/repoDividend";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+import { Dialog } from "@mui/material";
 
 interface IEditFormScripPriceProps {
   onDialogClose: (data?: IDividendPutDto) => void;
@@ -31,16 +34,18 @@ export default function EditFormScripPrice({
     setError,
     clearErrors,
     formState: { errors },
-  } = useForm<IDividendPutDto & IBaseDto>();
+  } = useForm<IDividendPutDto & IBaseDto>({
+    resolver: yupResolver(IDividendPutDtoSchema) as Resolver<IDividendPutDto & IBaseDto>,
+  });
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const saveMutation = useMutation({
     mutationFn: async (formData: IDividendPutDto & IBaseDto) => ({
-      response: await repoDividend.Put().requestFn(formData),
+      response: await ApiRequestAdapter.mutationOptions(repoDividend.Put()).requestFn(formData),
     }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: repoDividend.Get().invalidateQueryKey,
+        queryKey: ApiRequestAdapter.queryOptions(repoDividend.Get()).invalidateQueryKey,
       });
       dispatch(postSuccessMessage(""));
       onDialogClose(saveMutation.variables);
@@ -55,52 +60,53 @@ export default function EditFormScripPrice({
   };
 
   return (
-    <form onSubmit={handleSubmit(onDialogSubmit)}>
-      <DialogTitle id="form-dialog-title">
-        {!data ? "Add" : "Edit"} Scrip
-      </DialogTitle>
-      <DialogContent>
-        <FormControl error>
-          <input
-            type="hidden"
-            {...register("dividendId")}
-            value={data?.dividendId ?? undefined}
-          ></input>
+    <Dialog open={true} aria-labelledby="form-dialog-title">
+      <form onSubmit={handleSubmit(onDialogSubmit)}>
+        <DialogTitle id="form-dialog-title">
+          {!data ? "Add" : "Edit"} Scrip
+        </DialogTitle>
+        <DialogContent>
+          <FormControl error>
+            <input
+              type="hidden"
+              {...register("dividendId")}
+              value={data?.dividendId ?? undefined}
+            ></input>
 
-          <TextField
-            margin="dense"
-            id="scripPrice"
-            label="Scrip Conversion Price"
-            type="any" //This is an HTML5 input type
-            defaultValue={data?.scripPrice}
-            error={!!errors.scripPrice?.message}
-            helperText={errors.scripPrice?.message}
-            fullWidth
-            {...register("scripPrice")}
-          />
+            <TextField
+              margin="dense"
+              id="scripPrice"
+              label="Scrip Conversion Price"
+              defaultValue={data?.scripPrice}
+              error={!!errors.scripPrice?.message}
+              helperText={errors.scripPrice?.message}
+              fullWidth
+              {...register("scripPrice")}
+            />
 
-          <FormHelperText id="component-error-text">
-            {errors.genericErrorMsg?.message}
-          </FormHelperText>
-        </FormControl>
-      </DialogContent>
+            <FormHelperText id="component-error-text">
+              {errors.genericErrorMsg?.message}
+            </FormHelperText>
+          </FormControl>
+        </DialogContent>
 
-      <DialogActions>
-        <Button onClick={() => onDialogClose()} color="primary">
-          Cancel
-        </Button>
-        {/*Note that type=submit for a HTML form*/}
-        <Button
-          type="submit"
-          loading={saveMutation.isPending}
-          loadingPosition="start"
-          onClick={() => clearErrors()}
-          startIcon={<SaveIcon />}
-          variant="outlined"
-        >
-          {!data ? "Add" : "Edit"}
-        </Button>
-      </DialogActions>
-    </form>
+        <DialogActions>
+          <Button onClick={() => onDialogClose()} color="primary">
+            Cancel
+          </Button>
+          {/*Note that type=submit for a HTML form*/}
+          <Button
+            type="submit"
+            loading={saveMutation.isPending}
+            loadingPosition="start"
+            onClick={() => clearErrors()}
+            startIcon={<SaveIcon />}
+            variant="outlined"
+          >
+            {!data ? "Add" : "Edit"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 }

@@ -38,6 +38,7 @@ import {
 import { ITransactionGetDto } from "../../types/api";
 import repoPortfolio from "../../repo/repoPortfolio";
 import repoStockTransaction from "../../repo/repoStockTransaction";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 import DateRangeSelector from "../../components/DateRangeSelector";
 import MarketSelect from "../../components/MarketSelect";
 import TransactionTypeSelect from "../../components/TransactionTypeSelect";
@@ -60,6 +61,7 @@ import {
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
 import QuickSearchUtils from "../../utils/quickSearchUtils";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 
 const sx_tableCellNumeric = {
   textAlign: "right",
@@ -71,7 +73,7 @@ const sx_iconButton = {
 };
 
 interface StockTransactionTableProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
 }
 
 const tableFeaturesConfig = tableFeatures({
@@ -126,7 +128,7 @@ export default function StockTransactionTable({
       portfolioId: string;
       iden: number;
     }) => {
-      const deleteQuery = repoStockTransaction.Delete({ portfolioId, iden });
+      const deleteQuery = ApiRequestAdapter.mutationOptions(repoStockTransaction.Delete({ portfolioId, iden }));
       return {
         response: await deleteQuery.requestFn(),
         invalidateQueryKeys: deleteQuery.invalidateQueryKeys,
@@ -157,27 +159,27 @@ export default function StockTransactionTable({
   };
 
   const { isSuccess, isError, data, isFetching } = useQuery({
-    ...repoStockTransaction.Get(queryFilterDict),
+    ...ApiRequestAdapter.queryOptions(repoStockTransaction.Get(queryFilterDict)),
     staleTime: 5 * 60 * 1000,
   });
 
   // Precache the next query
   useQuery({
-    ...repoStockTransaction.Get({
+    ...ApiRequestAdapter.queryOptions(repoStockTransaction.Get({
       ...queryFilterDict,
       offset: queryFilterDict.offset + queryFilterDict.limit,
-    }),
+    })),
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: portfolioData } = useQuery(repoPortfolio.Get());
+  const { data: portfolioData } = useQuery(ApiRequestAdapter.queryOptions(repoPortfolio.Get()));
 
   if (pagePerRowOptions.indexOf(pagination.pageSize) === -1) {
     pagePerRowOptions.push(pagination.pageSize);
     pagePerRowOptions.sort((a, b) => a - b);
   }
 
-  if (isError)
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -220,14 +222,10 @@ export default function StockTransactionTable({
           id: "stockName",
           header: "Name",
         }),
-        ...(!isRealPortfolio
-          ? [
-              columnHelper.accessor("portfolioId", {
-                id: "portfolioId",
-                header: "Portfolio",
-              }),
-            ]
-          : []),
+        columnHelper.accessor("portfolioId", {
+          id: "portfolioId",
+          header: "Portfolio",
+        }),
         columnHelper.accessor("tranType", {
           id: "tranType",
           header: "Type",
@@ -324,34 +322,30 @@ export default function StockTransactionTable({
             const d = info.row.original;
             return (
               <Grid container wrap="nowrap" sx={{ alignItems: "center" }}>
-                <Tooltip title="Edit" aria-label="Edit">
-                  <IconButton
-                    size="small"
-                    aria-label="edit"
-                    sx={sx_iconButton}
-                    disabled={isFetching}
-                    onClick={() => {
-                      setDialogState({ isOpen: true, content: d });
-                    }}
-                  >
-                    <EditIcon fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  size="small"
+                  aria-label="edit"
+                  sx={sx_iconButton}
+                  disabled={isFetching}
+                  onClick={() => {
+                    setDialogState({ isOpen: true, content: d });
+                  }}
+                >
+                  <EditIcon fontSize="inherit" />
+                </IconButton>
 
                 <ConfirmationDialogWrapper
                   disabled={isFetching}
                   WrappingComponent={(props) => {
                     return (
-                      <Tooltip title="Delete" aria-label="Delete">
-                        <IconButton
-                          size="small"
-                          sx={sx_iconButton}
-                          disabled={props.disabled}
-                          onClick={props.onClick}
-                        >
-                          <DeleteIcon fontSize="inherit" />
-                        </IconButton>
-                      </Tooltip>
+                      <IconButton
+                        size="small"
+                        sx={sx_iconButton}
+                        disabled={props.disabled}
+                        onClick={props.onClick}
+                      >
+                        <DeleteIcon fontSize="inherit" />
+                      </IconButton>
                     );
                   }}
                   title="Confirmation"
@@ -381,23 +375,31 @@ export default function StockTransactionTable({
           },
         }),
       ]),
-    [isRealPortfolio, isFetching, deleteMutation]
+    [isFetching, deleteMutation.mutateAsync]
   );
 
   const table = useTable({
     features: tableFeaturesConfig,
     columns,
-    data: isSuccess ? data.tableData : [],
-    state: { globalFilter, pagination },
+    data: data?.tableData ?? [],
+    state: {
+      globalFilter,
+      pagination,
+      columnVisibility: {
+        portfolioId: !isRealPortfolio
+      },
+    },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     manualPagination: true,
     rowCount: data?.totalCount ?? 0,
     globalFilterFn: "includesString" as const,
+    getRowId: (row) => [row.portfolioId, row.stockId, row.iden].join("|"),
     getColumnCanGlobalFilter: (column) =>
       ["date", "stockId", "stockName", "portfolioId", "tranType"].includes(
         column.id,
       ),
+    autoResetPageIndex: false, //Explicitly marked as false
   });
 
   const quickSearchRef = useRef<HTMLInputElement | null>(null);
@@ -482,7 +484,7 @@ export default function StockTransactionTable({
           <Grid container sx={{ justifyContent: "space-between" }}>
             <Grid size={{ xs: 12, sm: "grow" }}>
               <Typography variant="h6" gutterBottom>
-                Details
+                Details {isError && <ImminentErrorIcon />}
               </Typography>
             </Grid>
 

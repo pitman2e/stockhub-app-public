@@ -14,6 +14,7 @@ import {
 } from "../../redux/snackbarSlice";
 import { repoScheduledJobs } from "../../repo/repoScheduledJobs";
 import { repoAdmin } from "../../repo/repoAdmin";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 export function MDataAdministration() {
   const dispatch = useDispatch();
@@ -36,7 +37,7 @@ export function MDataAdministration() {
               onClick={async () => {
                 try {
                   const request = repoAdmin.CrawlStockPrice_OnDemand();
-                  const response = await request.requestFn();
+                  const response = await ApiRequestAdapter.execute(request);
                   if (response.status === 200) {
                     dispatch(postSuccessMessage(""));
                   } else {
@@ -62,7 +63,7 @@ export function MDataAdministration() {
               onClick={async () => {
                 try {
                   const request = repoScheduledJobs.CrawlStockPrice_Minutely();
-                  const response = await request.requestFn();
+                  const response = await ApiRequestAdapter.execute(request);
                   if (response.status === 200) {
                     dispatch(postSuccessMessage(""));
                   } else {
@@ -88,7 +89,7 @@ export function MDataAdministration() {
               onClick={async () => {
                 try {
                   const request = repoAdmin.RecalculateDivPayAdjustment();
-                  const response = await request.requestFn();
+                  const response = await ApiRequestAdapter.execute(request);
                   if (response.status === 200) {
                     dispatch(postSuccessMessage(""));
                   } else {
@@ -114,7 +115,7 @@ export function MDataAdministration() {
               onClick={async () => {
                 try {
                   const request = repoAdmin.UpdatePositionDb();
-                  const response = await request.requestFn();
+                  const response = await ApiRequestAdapter.execute(request);
                   if (response.status === 200) {
                     dispatch(postSuccessMessage(""));
                   } else {
@@ -140,7 +141,7 @@ export function MDataAdministration() {
               onClick={async () => {
                 try {
                   const request = repoScheduledJobs.CrawlStockDividend();
-                  const response = await request.requestFn();
+                  const response = await ApiRequestAdapter.execute(request);
                   if (response.status === 200) {
                     dispatch(postSuccessMessage(""));
                   } else {

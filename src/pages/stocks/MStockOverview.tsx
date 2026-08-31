@@ -25,6 +25,7 @@ import "chart.js/auto";
 import { Line } from "react-chartjs-2";
 import AssetClassSelect from "../../components/AssetClassSelect";
 import repoStockPrice from "../../repo/repoStockPrice";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 export function MStockOverview() {
   const navigate = useNavigate();
@@ -49,12 +50,12 @@ export function MStockOverview() {
   };
 
   const { data: dataChart, isFetching } = useQuery({
-    ...repoStockPrice.GetStockPricesChart(queryKeys),
+    ...ApiRequestAdapter.queryOptions(repoStockPrice.GetStockPricesChart(queryKeys)),
     enabled: Boolean(stockId),
   });
 
   const { data: dataPerf } = useQuery({
-    ...repoStockPrice.GetPerformance({ stockId }),
+    ...ApiRequestAdapter.queryOptions(repoStockPrice.GetPerformance({ stockId })),
     enabled: !!stockId,
   });
 

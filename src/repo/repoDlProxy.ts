@@ -1,4 +1,19 @@
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString } from "./apiRequest";
+
+export interface IYahooChartResponse {
+    spark: {
+        result: Array<{
+            response: Array<{
+                meta: {
+                    previousClose: number;
+                    currentTradingPeriod: { regular: { start: number; end: number } };
+                };
+                timestamp: number[];
+                indicators: { quote: Array<{ close: (number | null)[] }> };
+            }>;
+        }>;
+    };
+}
 
 export class repoDlProxy {
     static readonly baseUrl = "api/DlProxy";
@@ -7,16 +22,12 @@ export class repoDlProxy {
         {
             stockId,
         }: {
-            stockId?: string | null | undefined;
+            stockId?: string | null;
         }
     ) {
         const baseUrl = repoDlProxy.baseUrl + "/YahooChart";
-        const url = baseUrl + "?" + utils.getQueryStringFromDict({ stockId });
+        const url = baseUrl + "?" + getApiQueryString({ stockId });
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl, stockId }),
-            queryFn: utils.getReactQueryFn(url),
-        };
+        return createApiRequest<IYahooChartResponse>(baseUrl, url);
     }
 }

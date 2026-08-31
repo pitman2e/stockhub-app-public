@@ -1,39 +1,27 @@
 import { IStockTopMovers, IStockPriceDatasets, IPerformance } from "../types/api";
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString } from "./apiRequest";
 
 export default class repoStockPrice {
   static readonly baseUrl = "api/StockPrice";
 
   static GetTopMovers({ topCnt }: { topCnt?: number | null }) {
     const baseUrl = repoStockPrice.baseUrl + "/TopMoving";
-    const url = baseUrl + "?" + utils.getQueryStringFromDict({ topCnt });
+    const url = baseUrl + "?" + getApiQueryString({ topCnt });
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl, topCnt }),
-      queryFn: utils.getReactQueryFn<IStockTopMovers>(url),
-    };
+    return createApiRequest<IStockTopMovers>(repoStockPrice.baseUrl, url);
   }
 
   static GetStockPricesChart({ stockId, fmDate, toDate, assetClasses }: { stockId?: string | null; fmDate?: number | null; toDate?: number | null; assetClasses?: string | null } = {}) {
     const baseUrl = repoStockPrice.baseUrl + "/StockPricesChart";
-    const url = baseUrl + "?" + utils.getQueryStringFromDict({ stockId, fmDate, toDate, assetClasses });
+    const url = baseUrl + "?" + getApiQueryString({ stockId, fmDate, toDate, assetClasses });
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl, stockId, fmDate, toDate, assetClasses }),
-      queryFn: utils.getReactQueryFn<IStockPriceDatasets>(url),
-    };
+    return createApiRequest<IStockPriceDatasets>(repoStockPrice.baseUrl, url);
   }
 
   static GetPerformance({ stockId }: { stockId?: string | null }) {
     const baseUrl = repoStockPrice.baseUrl + "/Performance";
-    const url = baseUrl + "?" + utils.getQueryStringFromDict({ stockId });
+    const url = baseUrl + "?" + getApiQueryString({ stockId });
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl, stockId }),
-      queryFn: utils.getReactQueryFn<IPerformance>(url),
-    };
+    return createApiRequest<IPerformance>(repoStockPrice.baseUrl, url);
   }
 }

@@ -1,5 +1,5 @@
 import { IStock } from "../types/db";
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString, getApiRoute } from "./apiRequest";
 
 export default class repoStocks {
     static readonly baseUrl = "api/Stocks";
@@ -14,47 +14,27 @@ export default class repoStocks {
         } = {}
     ) {
         const baseUrl = repoStocks.baseUrl;
-        const url = baseUrl + "/" + utils.getQueryRoute(portfolioId) +
-            "?" + utils.getQueryStringFromDict({ stockId, isOrderByPosVal, assetClasses, isOpenPosOnly });
+        const url = baseUrl + "/" + getApiRoute(portfolioId) +
+            "?" + getApiQueryString({ stockId, isOrderByPosVal, assetClasses, isOpenPosOnly });
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl, portfolioId, stockId, isOpenPosOnly, isOrderByPosVal, assetClasses }),
-            queryFn: utils.getReactQueryFn<IStock[]>(url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
+        return createApiRequest<IStock[]>(baseUrl, url);
     }
 
     static Post() {
         const baseUrl = repoStocks.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('POST', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
+        return createApiRequest(baseUrl, baseUrl, "POST");
     }
 
     static Put() {
         const baseUrl = repoStocks.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('PUT', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
+        return createApiRequest(baseUrl, baseUrl, "PUT");
     }
 
-    static Delete(
-        {
-            stockId,
-        }: {
-            stockId: string;
-        }
-    ) {
+    static Delete() {
         const baseUrl = repoStocks.baseUrl;
-        const url = baseUrl + "/" + utils.getQueryRoute(stockId);
-        return {
-            requestFn: () => utils.requestWithToken('DELETE', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
+
+        return createApiRequest(baseUrl, baseUrl, "DELETE");
     }
 }

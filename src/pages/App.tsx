@@ -32,7 +32,7 @@ import { useTheme } from "@mui/material/styles";
 import { closeMessage } from "../redux/snackbarSlice";
 import { selectSnackbarState } from "../redux/snackbarSlice";
 import { useColorMode } from "../hooks/useColorMode";
-import utils from "../utils/utils";
+import { isDemoMode, setToken } from "../utils/apiClient";
 
 const drawerWidth = 240;
 const queryClient = new QueryClient();
@@ -55,7 +55,7 @@ interface IDrawerProps {
 }
 
 export const DrawerContext = React.createContext<IDrawerProps>({
-  onMenuItemClick: () => {},
+  onMenuItemClick: () => { },
 });
 
 persistQueryClient({
@@ -68,11 +68,11 @@ interface IAppProps {
 }
 
 export default function App(props: IAppProps) {
-  const isDemoMode = utils.isDemoMode();
+  const isDemo = isDemoMode();
   const { window } = props;
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isLoading, setIsLoading] = React.useState(!isDemoMode);
-  const [isLogin, setIsLogin] = React.useState(isDemoMode);
+  const [isLoading, setIsLoading] = React.useState(!isDemo);
+  const [isLogin, setIsLogin] = React.useState(isDemo);
   const colorMode = useColorMode();
   const snackbarState = useSelector(selectSnackbarState);
   const dispatch = useDispatch();
@@ -82,10 +82,19 @@ export default function App(props: IAppProps) {
     dispatch(closeMessage());
   };
 
-  !isDemoMode &&
-    React.useEffect(() => {
-      getAuth().onAuthStateChanged((user) => updateLoginStatus(user));
+  React.useEffect(() => {
+    if (isDemo) return;
+
+    // Subscribe to changes and store the unsubscribe function
+    const unsubscribe = getAuth().onIdTokenChanged(async (user) => {
+      const freshToken = await user?.getIdToken();
+      setToken(freshToken);
+      updateLoginStatus(user);
     });
+
+    // Return the function so React can clean it up on unmount
+    return () => unsubscribe();
+  }, [isDemo]);
 
   function updateLoginStatus(user: User | null) {
     setIsLoading(false);
@@ -180,7 +189,7 @@ export default function App(props: IAppProps) {
                   </IconButton>
                 </Tooltip>
 
-                {!isDemoMode && (
+                {!isDemo && (
                   <ConfirmationDialogWrapper
                     WrappingComponent={(props) => (
                       <Tooltip title="Logout" aria-label="logout">

@@ -1,7 +1,6 @@
 import { ITransactionGetDto } from "../types/api";
 import { IPagedApiResult } from "../types/api";
-import utils from "../utils/utils";
-import repoPortfolio from "./repoPortfolio";
+import { createApiRequest, getApiQueryString } from "./apiRequest";
 
 export default class repoStockTransaction {
     static readonly baseUrl = "api/StockTransaction";
@@ -17,18 +16,18 @@ export default class repoStockTransaction {
             limit,
             offset,
         }: {
-            portfolioId?: string | null | undefined;
-            stockId?: string | null | undefined;
-            transactionType?: string | null | undefined;
-            market?: string | null | undefined;
-            fmDate?: number | null | undefined;
-            toDate?: number | null | undefined;
-            limit?: number | null | undefined;
-            offset?: number | null | undefined;
+            portfolioId?: string | null;
+            stockId?: string | null;
+            transactionType?: string | null;
+            market?: string | null;
+            fmDate?: number | null;
+            toDate?: number | null;
+            limit?: number | null;
+            offset?: number | null;
         } = {}
     ) {
         const baseUrl = repoStockTransaction.baseUrl;
-        const url = baseUrl + "?" + utils.getQueryStringFromDict({
+        const url = baseUrl + "?" + getApiQueryString({
             portfolioId,
             stockId,
             transactionType,
@@ -39,36 +38,19 @@ export default class repoStockTransaction {
             offset,
         });
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl, portfolioId, stockId, transactionType, market, fmDate, toDate, limit, offset }),
-            queryFn: utils.getReactQueryFn<IPagedApiResult<ITransactionGetDto>>(url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-        };
+        return createApiRequest<IPagedApiResult<ITransactionGetDto>>(baseUrl, url);
     }
 
     static Post() {
         const baseUrl = repoStockTransaction.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('POST', baseUrl, content),
-            invalidateQueryKeys: [
-                utils.getUserQueryKey({ baseUrl }),
-                utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-            ]
-        }
+        return createApiRequest(baseUrl, baseUrl, "POST");
     }
 
     static Put() {
         const baseUrl = repoStockTransaction.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('PUT', baseUrl, content),
-            invalidateQueryKeys: [
-                utils.getUserQueryKey({ baseUrl }),
-                utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-            ]
-        }
+        return createApiRequest(baseUrl, baseUrl, "PUT");
     }
 
     static Delete(
@@ -81,13 +63,7 @@ export default class repoStockTransaction {
         }
     ) {
         const baseUrl = repoStockTransaction.baseUrl;
-        const url = baseUrl + "?" + utils.getQueryStringFromDict({ portfolioId });
-        return {
-            requestFn: () => utils.requestWithToken('DELETE', url, { iden }),
-            invalidateQueryKeys: [
-                utils.getUserQueryKey({ baseUrl }),
-                utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-            ]
-        }
+        const url = baseUrl + "?" + getApiQueryString({ portfolioId });
+        return createApiRequest(baseUrl, url, "DELETE", { iden });
     }
 }

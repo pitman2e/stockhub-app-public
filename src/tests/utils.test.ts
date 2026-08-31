@@ -90,3 +90,40 @@ describe('DateRangeSelector.getPresetDates', () => {
     expect(getPresetDates('4Y').to?.isSame(today.endOf('day'), 'day')).toBe(true);
   });
 });
+
+describe('utils.toCamelCase', () => {
+  it('converts standard snake_case strings to camelCase', () => {
+    expect(utils.toCamelCase('user_first_name')).toBe('userFirstName');
+    expect(utils.toCamelCase('hello_world_id')).toBe('helloWorldId');
+  });
+
+  it('handles uppercase snake_case constants', () => {
+    expect(utils.toCamelCase('API_KEY')).toBe('apiKey');
+    expect(utils.toCamelCase('USER_FIRST_NAME')).toBe('userFirstName');
+  });
+
+  it('handles strings containing numbers', () => {
+    expect(utils.toCamelCase('user_1_details')).toBe('user1Details');
+    expect(utils.toCamelCase('item_20_count')).toBe('item20Count');
+  });
+
+  it('handles single words without underscores', () => {
+    expect(utils.toCamelCase('hello')).toBe('hello');
+    expect(utils.toCamelCase('WORLD')).toBe('world');
+  });
+
+  it('handles empty strings', () => {
+    expect(utils.toCamelCase('')).toBe('');
+  });
+
+  it('camelCase is untouched', () => {
+    expect(utils.toCamelCase('txCount')).toBe('txCount');
+    expect(utils.toCamelCase('txCountCount')).toBe('txCountCount');
+  });
+
+  it('handles multiple sequence underscores and edge positions', () => {
+    expect(utils.toCamelCase('multiple_words_in_a_row')).toBe('multipleWordsInARow');
+    expect(utils.toCamelCase('_leading_underscore')).toBe('LeadingUnderscore');
+    expect(utils.toCamelCase('trailing_underscore_')).toBe('trailingUnderscore_');
+  });
+});

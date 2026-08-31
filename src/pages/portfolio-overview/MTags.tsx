@@ -22,6 +22,7 @@ import {
 import { useForm } from "react-hook-form";
 import { ITagCsvPostDto } from "../../types/api";
 import { AxiosError } from "axios";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 interface IMTagsProps {
   category: string;
@@ -33,7 +34,7 @@ export function MTags({ category, onDialogClose }: IMTagsProps) {
   const queryClient = useQueryClient();
   const saveMutation = useMutation({
     mutationFn: async (dto: ITagCsvPostDto) => {
-      const postQuery = repoTags.Post();
+      const postQuery = ApiRequestAdapter.mutationOptions(repoTags.Post());
       return {
         response: await postQuery.requestFn(dto),
         invalidateQueryKey: postQuery.invalidateQueryKey,
@@ -48,7 +49,7 @@ export function MTags({ category, onDialogClose }: IMTagsProps) {
       dispatch(postErrorMessage(utils.getApiErrorMessage(error)));
     },
   });
-  const tagQuery = repoTags.Get({ category });
+  const tagQuery = ApiRequestAdapter.queryOptions(repoTags.Get({ category }));
   const { data, isError, isPending, isSuccess, error } = useQuery(tagQuery);
 
   const {

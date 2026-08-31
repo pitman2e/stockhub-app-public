@@ -18,6 +18,7 @@ import { DrawerContext } from "./App";
 import Box from "@mui/material/Box";
 import repoPortfolio from "../repo/repoPortfolio";
 import utils from "../utils/utils";
+import ApiRequestAdapter from "../adapters/apiRequestAdapter";
 
 const sx_nested = {
   paddingLeft: 4,
@@ -127,13 +128,14 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
 }
 
 export function AppDrawer() {
-  const { isLoading, isError, data } = useQuery(repoPortfolio.GetSummary());
+  const { isLoading, isError, data } = useQuery(
+    ApiRequestAdapter.queryOptions(repoPortfolio.GetSummary()),
+  );
   const location = useLocation();
-  const pingQuery = repoUser.Ping();
+  const pingQuery = ApiRequestAdapter.queryOptions(repoUser.Ping());
 
   useQuery({
-    queryFn: pingQuery.requestFn,
-    queryKey: pingQuery.invalidateQueryKey,
+    ...pingQuery,
     refetchIntervalInBackground: true,
     refetchInterval: 60 * 1000,
   });

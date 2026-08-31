@@ -1,5 +1,5 @@
 import { IStockDividend } from "../types/db";
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString, getApiRoute } from "./apiRequest";
 
 export default class repoDividend {
   static readonly baseUrl = "api/Dividend";
@@ -9,19 +9,14 @@ export default class repoDividend {
       portfolioId,
       stockId,
     }: {
-      portfolioId?: string | null | undefined;
-      stockId?: string | null | undefined;
+      portfolioId?: string | null;
+      stockId?: string | null;
     } = {}
   ) {
     const baseUrl = repoDividend.baseUrl;
-    const url = baseUrl + "/" + utils.getQueryRoute(portfolioId) + "?" + utils.getQueryStringFromDict({ stockId });
+    const url = baseUrl + "/" + getApiRoute(portfolioId) + "?" + getApiQueryString({ stockId });
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl, portfolioId, stockId }),
-      queryFn: utils.getReactQueryFn<IStockDividend[]>(url),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest<IStockDividend[]>(baseUrl, url);
   }
 
   static RequestDL(
@@ -31,21 +26,15 @@ export default class repoDividend {
       stockId: string;
     }
   ) {
-    const baseUrl = repoDividend.baseUrl + "/RequestDL";
-    const url = baseUrl + "/" + utils.getQueryRoute(stockId);
+    const baseUrl = repoDividend.baseUrl;
+    const url = baseUrl + "/RequestDL" + "/" + getApiRoute(stockId);
 
-    return {
-      requestFn: () => utils.requestWithToken('POST', url),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-    }
+    return createApiRequest(baseUrl, url, "POST");
   }
 
   static Put() {
     const baseUrl = repoDividend.baseUrl;
 
-    return {
-      requestFn: (content: any) => utils.requestWithToken('PUT', baseUrl, content),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest(baseUrl, baseUrl, "PUT");
   }
 }

@@ -12,6 +12,12 @@
             "type": "node-terminal",
             "request": "launch",
             "command": "npm run start:demo"
+        },
+        {
+            "name": "Run npm start (Web-Uat)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run start:web-uat"
         }
     ]
 }

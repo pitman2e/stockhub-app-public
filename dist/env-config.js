@@ -1,1 +1,0 @@
-window.__ENV__ = {} //Placeholder that will be overwritten by ci/env.sh

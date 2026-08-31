@@ -1,4 +1,4 @@
-import utils from "../utils/utils";
+import { createApiRequest } from "./apiRequest";
 
 export class repoScheduledJobs {
     static readonly baseUrl = "api/ScheduledJobs";
@@ -7,19 +7,13 @@ export class repoScheduledJobs {
         const baseUrl = repoScheduledJobs.baseUrl;
         const url = `${baseUrl}/CrawlStockPrice_Minutely`;
 
-        return {
-            requestFn: () => utils.requestWithToken('GET', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-        };
+        return createApiRequest(baseUrl, url, "GET");
     }
 
     static CrawlStockDividend() {
         const baseUrl = repoScheduledJobs.baseUrl;
         const url = `${baseUrl}/CrawlStockDividend`;
 
-        return {
-            requestFn: () => utils.requestWithToken('GET', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl })
-        };
+        return createApiRequest(baseUrl, url, "GET");
     }
 }

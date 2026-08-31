@@ -23,6 +23,8 @@ import ToggleButtonGroup, {
 } from "@mui/material/ToggleButtonGroup";
 import { Theme } from "@mui/material/styles";
 import repoPortfolio from "../../repo/repoPortfolio";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+import { currencies } from "../../types/api";
 
 const sxGridItem = (theme: Theme) => ({
   "&:hover": {
@@ -68,7 +70,7 @@ export default function PortfolioListSummary() {
   };
 
   const { isLoading, isError, data, isFetching } = useQuery({
-    ...repoPortfolio.GetSummary({ currency: defaultCurrency }),
+    ...ApiRequestAdapter.queryOptions(repoPortfolio.GetSummary({ currency: defaultCurrency })),
     refetchInterval: 60000,
     refetchIntervalInBackground: true,
   });
@@ -121,8 +123,11 @@ export default function PortfolioListSummary() {
                   onChange={handleCurrencyChange}
                   aria-label="Display Currnecy"
                 >
-                  <ToggleButton value="HKD">HKD</ToggleButton>
-                  <ToggleButton value="USD">USD</ToggleButton>
+                  {currencies.map((currency) => (
+                    <ToggleButton key={currency.value} value={currency.value}>
+                      {currency.value}
+                    </ToggleButton>
+                  ))}
                 </ToggleButtonGroup>
               </Grid>
             </Grid>
