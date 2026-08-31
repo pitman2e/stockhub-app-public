@@ -19,7 +19,7 @@ import Grid from "@mui/material/Grid";
 import AddIcon from "@mui/icons-material/Add";
 import IconButton from "@mui/material/IconButton";
 import Dialog from "@mui/material/Dialog";
-import StockEditForm from "./EditFormStock";
+import EditFormStock from "./EditFormStock";
 import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import utils from "../../utils/utils";
@@ -49,6 +49,7 @@ import {
 import { AxiosError } from "axios";
 import { Tooltip } from "@mui/material";
 import QuickSearchUtils from "../../utils/quickSearchUtils";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 
 const sx_iconButton = {
   padding: 0,
@@ -67,7 +68,7 @@ const tableFeaturesConfig = tableFeatures({
 const columnHelper = createColumnHelper<typeof tableFeaturesConfig, IStock>();
 
 interface IStocksTableProps {
-  recordPerPage?: number | undefined;
+  recordPerPage?: number;
   assetClasses: string[];
 }
 
@@ -87,9 +88,9 @@ export default function StocksTable({
   const dispatch = useDispatch();
   const deleteMutation = useMutation({
     mutationFn: async ({ stockId }: { stockId: string }) => {
-      const deleteQuery = repoStocks.Delete({ stockId });
+      const deleteQuery = repoStocks.Delete();
       return {
-        response: await deleteQuery.requestFn(),
+        response: await deleteQuery.requestFn({ stockId }),
         invalidateQueryKey: deleteQuery.invalidateQueryKey,
       };
     },
@@ -118,7 +119,7 @@ export default function StocksTable({
     setIsDialogOpen(false);
   };
 
-  if (isError)
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -144,16 +145,19 @@ export default function StocksTable({
         }),
         columnHelper.accessor("coupon", {
           header: "Coupon",
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.coupon ? row.original.coupon + "%" : "-",
         }),
         columnHelper.accessor("couponFreq", {
           header: "Coupon Freq",
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.couponFreq ? row.original.couponFreq : "-",
         }),
         columnHelper.accessor("faceValue", {
           header: "Face Value",
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.faceValue ? row.original.faceValue : "-",
         }),
@@ -164,34 +168,30 @@ export default function StocksTable({
             const stock = row.original;
             return (
               <Grid container wrap="nowrap">
-                <Tooltip title="Edit" aria-label="Edit">
-                  <IconButton
-                    size="small"
-                    sx={sx_iconButton}
-                    disabled={isFetching}
-                    onClick={() => {
-                      setIsDialogOpen(true);
-                      setToEditData(stock);
-                    }}
-                  >
-                    <EditIcon fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
+                <IconButton
+                  size="small"
+                  sx={sx_iconButton}
+                  disabled={isFetching}
+                  onClick={() => {
+                    setIsDialogOpen(true);
+                    setToEditData(stock);
+                  }}
+                >
+                  <EditIcon fontSize="inherit" />
+                </IconButton>
 
                 <ConfirmationDialogWrapper
                   disabled={isFetching}
                   WrappingComponent={(props) => (
-                    <Tooltip title="Delete" aria-label="Delete">
-                      <IconButton
-                        size="small"
-                        aria-label="delete"
-                        sx={sx_iconButton}
-                        disabled={props.disabled}
-                        onClick={props.onClick}
-                      >
-                        <DeleteIcon fontSize="inherit" />
-                      </IconButton>
-                    </Tooltip>
+                    <IconButton
+                      size="small"
+                      aria-label="delete"
+                      sx={sx_iconButton}
+                      disabled={props.disabled}
+                      onClick={props.onClick}
+                    >
+                      <DeleteIcon fontSize="inherit" />
+                    </IconButton>
                   )}
                   title="Confirmation"
                   description="Are you sure to delete this record ?"
@@ -212,11 +212,12 @@ export default function StocksTable({
   const table = useTable({
     features: tableFeaturesConfig,
     columns,
-    data: isSuccess ? data : [],
+    data: data ?? [],
     state: { globalFilter, pagination },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     globalFilterFn: "includesString" as const,
+    getRowId: (row) => [row.stockId].join("|"),
     getColumnCanGlobalFilter: (column) =>
       [
         "stockId",
@@ -225,6 +226,7 @@ export default function StocksTable({
         "currency",
         "maturityDate",
       ].includes(column.id),
+    autoResetPageIndex: true,
   });
 
   const quickSearchRef = useRef<HTMLInputElement | null>(null);
@@ -263,9 +265,9 @@ export default function StocksTable({
       {isFetching && <DefaultLinearProgress />}
       <DefaultPaper>
         <Grid container sx={{ justifyContent: "space-between" }}>
-          <Grid size= {{ xs: 12, sm: 'grow' }}>
+          <Grid size={{ xs: 12, sm: 'grow' }}>
             <Typography variant="h6" gutterBottom>
-              Details
+              Details {isError && <ImminentErrorIcon />}
             </Typography>
           </Grid>
 
@@ -279,22 +281,19 @@ export default function StocksTable({
                 value={globalFilter}
                 onChange={(event) => {
                   table.setGlobalFilter(event.target.value);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               />
             </Grid>
 
             <Grid>
-              <Tooltip title="Add" aria-label="Add">
-                <IconButton
-                  onClick={() => {
-                    setToEditData(null);
-                    setIsDialogOpen(true);
-                  }}
-                >
-                  <AddIcon />
-                </IconButton>
-              </Tooltip>
+              <IconButton
+                onClick={() => {
+                  setToEditData(null);
+                  setIsDialogOpen(true);
+                }}
+              >
+                <AddIcon />
+              </IconButton>
             </Grid>
           </Grid>
         </Grid>
@@ -305,7 +304,14 @@ export default function StocksTable({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableCell key={header.id}>
+                    <TableCell
+                      key={header.id}
+                      sx={
+                        header.column.columnDef.meta?.isNumeric
+                          ? { textAlign: "right" }
+                          : undefined
+                      }
+                    >
                       {header.isPlaceholder ? null : (
                         <table.FlexRender header={header} />
                       )}
@@ -326,8 +332,15 @@ export default function StocksTable({
               {isSuccess &&
                 rows.map((row) => (
                   <TableRow hover key={row.id}>
-                    {row.getAllCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell
+                        key={cell.id}
+                        sx={
+                          cell.column.columnDef.meta?.isNumeric
+                            ? { textAlign: "right" }
+                            : undefined
+                        }
+                      >
                         <table.FlexRender cell={cell} />
                       </TableCell>
                     ))}
@@ -358,12 +371,11 @@ export default function StocksTable({
           }}
         />
       </DefaultPaper>
-      <Dialog open={isDialogOpen} aria-labelledby="form-dialog-title">
-        <StockEditForm
+      {isDialogOpen &&
+        <EditFormStock
           onDialogClose={onDialogClose}
-          dialogUpdateContent={toEditData}
-        />
-      </Dialog>
+          content={toEditData}
+        />}
     </>
   );
 }

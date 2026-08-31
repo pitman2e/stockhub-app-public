@@ -38,6 +38,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import QuickSearchUtils from "../../utils/quickSearchUtils";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 
 const sx_tableCellNumeric = {
   textAlign: "right",
@@ -69,15 +70,15 @@ const columnHelper = createColumnHelper<
 >();
 
 interface IPositionsTableProps {
-  portfolioId: string | undefined;
-  recordPerPage?: number | undefined;
-  isShowPortfolioId: boolean;
+  portfolioId?: string;
+  recordPerPage?: number;
+  isRealPortfolio: boolean;
 }
 
 export function PositionsTable({
   portfolioId,
   recordPerPage,
-  isShowPortfolioId,
+  isRealPortfolio,
 }: IPositionsTableProps) {
   const [posStatus, setPosStatus] = useState("open");
   const [pagination, setPagination] = useState({
@@ -104,7 +105,7 @@ export function PositionsTable({
     pagePerRowOptions.sort((a, b) => a - b); //By default javascript sort likes a string
   }
 
-  if (isError)
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -135,13 +136,9 @@ export function PositionsTable({
             </>
           ),
         }),
-        ...(isShowPortfolioId
-          ? [
-            columnHelper.accessor("portfolioId", {
-              header: "Portfolio",
-            }),
-          ]
-          : []),
+        columnHelper.accessor("portfolioId", {
+          header: "Portfolio",
+        }),
         columnHelper.accessor("stockPrice", {
           header: () => (
             <Box>
@@ -149,6 +146,7 @@ export function PositionsTable({
               <Typography variant="caption">Qty x Cost Price</Typography>
             </Box>
           ),
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -177,6 +175,7 @@ export function PositionsTable({
               </Box>
             </TableSortLabel>
           ),
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -209,6 +208,7 @@ export function PositionsTable({
               </Box>
             </TableSortLabel>
           ),
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -233,6 +233,7 @@ export function PositionsTable({
               </Box>
             </TableSortLabel>
           ),
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -257,6 +258,7 @@ export function PositionsTable({
               </Box>
             </TableSortLabel>
           ),
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -289,6 +291,7 @@ export function PositionsTable({
               </Box>
             </TableSortLabel>
           ),
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) => (
             <>
               <Typography variant="body1">
@@ -317,20 +320,29 @@ export function PositionsTable({
         }),
       ])
     },
-    [isShowPortfolioId, sortBy],
+    [sortBy],
   );
 
   const table = useTable({
     features: tableFeaturesConfig,
     columns,
-    data: isSuccess ? data : [],
-    state: { globalFilter, pagination },
+    data: data ?? [],
+    state: {
+      globalFilter,
+      pagination,
+      columnVisibility: {
+        portfolioId: isRealPortfolio
+      },
+    },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     globalFilterFn: "includesString" as const,
+    getRowId: (row) => [row.portfolioId, row.stockId].join("|"),
     getColumnCanGlobalFilter: (column) =>
-      column.id === "stockId" ||
-      (isShowPortfolioId && column.id === "portfolioId"),
+      ["stockId", "portfolioId"].includes(
+        column.id,
+      ),
+    autoResetPageIndex: true,
   });
 
   const quickSearchRef = useRef<HTMLInputElement | null>(null);
@@ -364,24 +376,6 @@ export function PositionsTable({
     currentPageRowCount: rows.length,
   });
 
-  type IStockPositionValueColumnKey = keyof IStockPositionValue;
-
-  const isNumericColumn = (columnId: IStockPositionValueColumnKey) =>
-    columnId !== "stockId" && columnId !== "portfolioId";
-
-  const getCellSx = (columnId: IStockPositionValueColumnKey, row: IStockPositionValue) => ({
-    ...(isNumericColumn(columnId) ? sx_tableCellNumeric : undefined),
-    ...(columnId === "totalGain" ? utils.getColorClass(row.totalGain) : {}),
-    ...(columnId === "currentGain"
-      ? utils.getColorClass(
-          row.quantity === 0 ? 0 : row.currentGainPercentage,
-        )
-      : {}),
-    ...(columnId === "unrealisedGain"
-      ? utils.getColorClass(row.unrealisedGain)
-      : {}),
-  });
-
   return (
     <>
       {isFetching && <DefaultLinearProgress />}
@@ -389,7 +383,7 @@ export function PositionsTable({
         <Grid container sx={{ justifyContent: "space-between" }}>
           <Grid size="grow">
             <Typography variant="h6" gutterBottom>
-              Details
+              Details {isError && <ImminentErrorIcon />}
             </Typography>
           </Grid>
         </Grid>
@@ -404,7 +398,6 @@ export function PositionsTable({
                 disabled={posStatus === POS_STATUS_OPEN}
                 onClick={() => {
                   setPosStatus(POS_STATUS_OPEN);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               >
                 Open
@@ -413,7 +406,6 @@ export function PositionsTable({
                 disabled={posStatus === POS_STATUS_CLOSED}
                 onClick={() => {
                   setPosStatus(POS_STATUS_CLOSED);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               >
                 Closed
@@ -422,7 +414,6 @@ export function PositionsTable({
                 disabled={posStatus === POST_STATUS_ANY}
                 onClick={() => {
                   setPosStatus(POST_STATUS_ANY);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               >
                 Any
@@ -439,7 +430,6 @@ export function PositionsTable({
               value={globalFilter}
               onChange={(event) => {
                 table.setGlobalFilter(event.target.value);
-                setPagination((prev) => ({ ...prev, pageIndex: 0 }));
               }}
             />
           </Grid>
@@ -454,7 +444,7 @@ export function PositionsTable({
                     <TableCell
                       key={header.id}
                       sx={
-                        isNumericColumn(header.column.id as IStockPositionValueColumnKey)
+                        header.column.columnDef.meta?.isNumeric
                           ? sx_tableCellNumeric
                           : undefined
                       }
@@ -479,14 +469,20 @@ export function PositionsTable({
               {isSuccess &&
                 rows.map((row) => (
                   <TableRow hover key={row.id}>
-                    {row.getAllCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        sx={getCellSx(cell.column.id as IStockPositionValueColumnKey, row.original)}
-                      >
-                        <table.FlexRender cell={cell} />
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            ...(meta?.isNumeric ? sx_tableCellNumeric : {}),
+                            ...(meta?.isGainLoss ? utils.getColorClass(cell.getValue() as number) : {}),
+                          }}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))}
               {emptyRowsCount > 0 && (

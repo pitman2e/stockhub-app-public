@@ -2,14 +2,18 @@ import { getAuth } from 'firebase/auth';
 import sxStyles from '../ui/sxStyles';
 import axios, { AxiosError, AxiosResponse } from 'axios';
 import { FieldValues, Path, UseFormSetError } from 'react-hook-form';
-import { IApiActionResult, IHookError, IProblemDetails } from '../types/api';
-import { jwtDecode } from 'jwt-decode';
+import { IApiActionResult, IHookError } from '../types/api';
 import { API_URL, DEMO_JWT } from './config';
+import { apiClient, getJwtSub, getToken } from './apiClient';
 
 const {
   VITE_API_URL,
   VITE_DEMO_JWT
 } = import.meta.env;
+
+type CamelCase<S extends string> = S extends `${infer T}_${infer U}`
+  ? `${Lowercase<T>}${Capitalize<CamelCase<U>>}`
+  : Lowercase<S>;
 
 export default class utils {
   static getFullUrl(url: string) {
@@ -22,21 +26,8 @@ export default class utils {
     return api_url + url;
   }
 
-  static getDemoJwt = (): string => DEMO_JWT || VITE_DEMO_JWT || "";
-
   static getUserQueryKey(key: Record<string, string | number | undefined | boolean | null> = {}) {
-    let uid: string;
-    let demo_jwt = utils.getDemoJwt();
-
-    if (!!demo_jwt) {
-      uid = this.getJwtSub(demo_jwt);
-    } else {
-      const currentUser = getAuth().currentUser;
-      if (currentUser === null) {
-        throw Error("Failed to obtain Current User from Firebase API")
-      }
-      uid = currentUser.uid
-    }
+    let uid = getJwtSub();
 
     const cleanedKey = Object.fromEntries(
       Object.entries(key).filter(([_, value]) => value !== null && value !== undefined && value !== "")
@@ -44,30 +35,20 @@ export default class utils {
     return [uid, cleanedKey];
   }
 
+
   static async requestWithToken(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     url: string,
     jsonPayload?: any
   ): Promise<AxiosResponse> {
-    let token: string;
-    let demo_jwt = utils.getDemoJwt();
-
-    if (!!demo_jwt) {
-      token = demo_jwt;
-    } else {
-      const currentUser = getAuth().currentUser;
-      if (currentUser === null) {
-        throw Error("Failed to obtain Current User from Firebase API");
-      }
-      token = await currentUser.getIdToken();
-    }
+    let jwt = getToken();
 
     const config = {
       method: method,
       url: this.getFullUrl(url),
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${jwt}`
       },
       data: jsonPayload
     };
@@ -124,7 +105,7 @@ export default class utils {
     }
   }
 
-  static getFmtDec(val: number | undefined, decimalPlaces: number, prefix: string, suffix: string, emptyPlaceHolder: string) {
+  static getFmtDec(val: number | null | undefined, decimalPlaces: number, prefix: string, suffix: string, emptyPlaceHolder: string) {
     let rtvTmp;
 
     if (val === null || val === undefined) {
@@ -142,7 +123,7 @@ export default class utils {
 
   static getReactQueryFn<T = any>(url: string): () => Promise<T> {
     return async () => {
-      const response = await utils.requestWithToken('GET', url, {});
+      const response = await apiClient.get(url);
       const apiResult = await response.data;
       if (response.status === 200) {
         return apiResult.payload as T;
@@ -220,6 +201,7 @@ export default class utils {
     return actionResult?.message ?? error.message ?? "Server rejected input. Please verify";
   }
 
+
   // TODO: Typing has no particular meaning?
   static setFormErrorFromApiError<TFieldValues extends FieldValues>(
     error: AxiosError<any>,
@@ -232,7 +214,13 @@ export default class utils {
 
     if (actionResult?.hookErrors?.length) {
       actionResult.hookErrors.forEach((hookError) => {
-        setError(hookError.fieldName as Path<TFieldValues>, {
+        var camelCaseFieldName = utils.toCamelCase(hookError.fieldName as string);
+        // Workaround API having thousands of way to not returning camelCase fieldName
+        if (camelCaseFieldName !== hookError.fieldName) {
+          console.warn(`Field name '${hookError.fieldName as string}' is not in camelCase. Using '${camelCaseFieldName}' instead.`);
+        }
+
+        setError(camelCaseFieldName as Path<TFieldValues>, {
           type: "manual",
           message: hookError.message,
         });
@@ -243,10 +231,6 @@ export default class utils {
         message: utils.getApiErrorMessage(error),
       });
     }
-  }
-
-  static isDemoMode() {
-    return !!utils.getDemoJwt();
   }
 
   static getEmptyRowsCountForLastPage({
@@ -272,8 +256,32 @@ export default class utils {
     return pageSize - currentPageRowCount;
   }
 
-  static getJwtSub(token: string): string {
-    const decoded = jwtDecode<{ sub: string }>(token);
-    return decoded.sub;
+  static toCamelCase<S extends string>(str: S): CamelCase<S> {
+    if (str === "") {
+      return "" as CamelCase<S>;
+    }
+
+    if (!str.includes("_")) {
+      return /^[A-Z0-9]+$/.test(str) ? str.toLowerCase() as CamelCase<S> : str as unknown as CamelCase<S>;
+    }
+
+    const parts = str.split("_").filter(Boolean);
+    const camelCase = parts
+      .map((part, index) => {
+        const normalized = part.toLowerCase();
+
+        if (index === 0 && str.startsWith("_")) {
+          return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        }
+
+        if (index === 0) {
+          return normalized;
+        }
+
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      })
+      .join("");
+
+    return (str.endsWith("_") ? `${camelCase}_` : camelCase) as CamelCase<S>;
   }
 }

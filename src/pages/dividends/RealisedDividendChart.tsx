@@ -19,7 +19,7 @@ import { useTheme } from "@mui/material/styles";
 import { IChartJsDataSet } from "../../types/api";
 
 interface IRealisedDividendChartProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
   stockId: string;
 }
 

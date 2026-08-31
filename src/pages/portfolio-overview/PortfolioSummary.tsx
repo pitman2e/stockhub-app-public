@@ -12,7 +12,7 @@ import { IStockSummary } from "../../types/api";
 import utils from "../../utils/utils";
 
 interface IPortfolioSummaryProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
   isForcedSummary?: boolean;
 }
 

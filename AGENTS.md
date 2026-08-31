@@ -1,3 +1,8 @@
+# Stockhub-app AI Agent Guide
+
+## Purpose
+This repository is a Vite + React + TypeScript front-end app for StockHub. It uses MUI, React Router v7, React Query, Firebase authentication, and a small Redux store for UI snackbars.
+
 <!-- intent-skills:start -->
 ## Skill Loading
 
@@ -9,11 +14,6 @@ Before editing files for a substantial task:
 - Multiple matches: prefer the most specific local skill for the package or concern you are changing; load additional skills only when the task spans multiple packages or concerns.
 <!-- intent-skills:end -->
 
-# stockhub-app AI Agent Guide
-
-## Purpose
-This repository is a Vite + React + TypeScript front-end app for StockHub. It uses MUI, React Router v7, React Query, Firebase authentication, and a small Redux store for UI snackbars.
-
 ## Primary commands
 - `npm install`
 - `npm run start` — local development server
@@ -23,8 +23,6 @@ This repository is a Vite + React + TypeScript front-end app for StockHub. It us
 - `npm ts-compile` — Run Typescript compiler for type checking
 
 ## Key architecture
-- `src/index.tsx` configures `BrowserRouter` with a dynamic `basename` to support reverse proxy deployments under `/app/`.
-- `vite.config.js` uses `VITE_APP_PUBLIC_URL` to set the asset `base` path for production builds.
 - `src/pages/ThemedApp.tsx` is the app root and provides MUI theme, Redux provider, and date-picker localization.
 - `src/pages/App.tsx` contains the main authenticated app shell, drawer, toolbar, and React Query provider.
 - `src/routes.tsx` defines the app routes and page components.
@@ -43,18 +41,10 @@ This repository is a Vite + React + TypeScript front-end app for StockHub. It us
 - Master components that the React Router directly renders are named `M{ComponentName}`.
 - Table components are named `{ComponentName}Table`.
 - Shared types belong in `src/types` rather than component files where appropriate.
-- The app uses MUI theming and `useColorMode` from `src/hooks/useColorMode.ts`.
 - Always insert a blank line between consecutive multi-line const declarations, hooks, and top-level statements.
-- Avoid remove comments unless it is factually wrong
+- Never remove comments unless it is factually wrong
+- Never reformat codes unless modification is needed, new code must follow the surrounding code style
+- Keep styling simple, prefer default MUI style and avoid excessive use of the MUI sx props or hardcode value.
 
-## Deployment-specific notes
-- Reverse proxy deployments expect `BrowserRouter` `basename` to align with the current `window.location.pathname`.
-- `vite.config.js` uses `VITE_APP_PUBLIC_URL` to locate static assets.
-- The README includes reverse proxy guidance and router base path behavior.
-
-## What to prioritize
-- Preserve current routing, theme, and auth behavior when changing top-level app structure.
-- Keep API query helper patterns consistent with `src/repo` classes.
-- Avoid changing Firebase initialization unless adding support for environment-based config.
-- Validate any routing or basename changes against `src/index.tsx` and `vite.config.js`.
-- Keep styling simple, avoid excessive use of the MUI sx props.
+## Documentation Index
+- **Deployment** Refer to `docs/deployment.md` for build, environment, and deployment procedures.

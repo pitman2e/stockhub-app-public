@@ -55,17 +55,25 @@ export default function TopMover() {
 
   const columns = [
     columnHelper.display({ id: "ticker", header: "Rising (Percentage)" }),
-    columnHelper.display({ id: "change", header: "Change" }),
+    columnHelper.display({
+      id: "change",
+      header: "Change",
+      meta: { align: "right" },
+    }),
   ];
   const risingTable = useTable({
     features: tableFeaturesConfig,
     columns,
     data: data?.byUpPercentage ?? [],
+    getRowId: (row) => [row.stockId].join("|"),
+
   });
   const fallingTable = useTable({
     features: tableFeaturesConfig,
     columns,
     data: data?.byDownPercentage ?? [],
+    getRowId: (row) => [row.stockId].join("|"),
+
   });
 
   return (
@@ -97,9 +105,7 @@ export default function TopMover() {
                       {headerGroup.headers.map((header) => (
                         <TableCell
                           key={header.id}
-                          align={
-                            header.column.id === "change" ? "right" : undefined
-                          }
+                          align={header.column.columnDef.meta?.align}
                         >
                           {header.isPlaceholder ? null : (
                             <risingTable.FlexRender header={header} />

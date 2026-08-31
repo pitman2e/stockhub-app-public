@@ -58,7 +58,6 @@ export function MDividends() {
                 portfolioId={portfolioId}
                 filterStockId={filterStockId}
                 filterMarket={filterMarket}
-                isShowPortfolioId={!portfolioId}
               />
             </Grid>
           </Grid>

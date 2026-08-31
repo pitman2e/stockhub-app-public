@@ -11,9 +11,9 @@ export default class repoRealisedDividend {
       stockId,
       market,
     }: { 
-      portfolioId?: string | null | undefined; 
-      stockId?: string | null | undefined;
-      market?: string | null | undefined;
+      portfolioId?: string | null; 
+      stockId?: string | null;
+      market?: string | null;
     } = {}
   ) {
     const baseUrl = repoRealisedDividend.baseUrl;

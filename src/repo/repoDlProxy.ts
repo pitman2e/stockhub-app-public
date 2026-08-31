@@ -7,7 +7,7 @@ export class repoDlProxy {
         {
             stockId,
         }: {
-            stockId?: string | null | undefined;
+            stockId?: string | null;
         }
     ) {
         const baseUrl = repoDlProxy.baseUrl + "/YahooChart";

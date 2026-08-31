@@ -1,10 +1,10 @@
-import FormControl from "@mui/material/FormControl";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogTitle from "@mui/material/DialogTitle";
 import FormHelperText from "@mui/material/FormHelperText";
 import TextField from "@mui/material/TextField";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, type Resolver, useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import Button from "@mui/material/Button";
 import SaveIcon from "@mui/icons-material/Save";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,39 +18,65 @@ import {
   assetClasses,
   currencies,
   IStockPostDto,
+  IStockPostDtoSchema,
   IStockPutDto,
+  IStockPutDtoSchema,
 } from "../../types/api";
 import { Grid } from "@mui/system";
 import repoStocks from "../../repo/repoStocks";
 import { AxiosError } from "axios";
+import { Dialog } from "@mui/material";
 
 interface IEditFormStockProps {
   onDialogClose: () => void;
-  dialogUpdateContent?: IStock | undefined | null;
+  content?: IStock | null;
 }
 
-export default function StockEditForm({
+export default function EditFormStock({
   onDialogClose,
-  dialogUpdateContent,
+  content,
 }: IEditFormStockProps) {
   const {
     control,
     register,
     handleSubmit,
     setError,
-    clearErrors,
     formState: { errors },
   } = useForm<IStockPutDto | IStockPostDto>({
-    defaultValues: {
-      key_stockId: dialogUpdateContent?.stockId,
-      version: dialogUpdateContent?.version,
-    },
+    resolver: yupResolver(content ? IStockPutDtoSchema : IStockPostDtoSchema) as Resolver<IStockPutDto | IStockPostDto>,
+    values: content
+      ? {
+        stockId: content.stockId,
+        stockName: content.stockName,
+        currency: content.currency,
+        assetClass: content.assetClass,
+        maturityDate: content.maturityDate ?? "",
+        coupon: content.coupon,
+        couponFreq: content.couponFreq,
+        faceValue: content.faceValue,
+        key_stockId: content.stockId,
+        version: content.version,
+      }
+      : {
+        stockId: "",
+        stockName: "",
+        currency: "",
+        assetClass: "STOCK",
+        maturityDate: "",
+        coupon: null,
+        couponFreq: null,
+        faceValue: null,
+        key_stockId: "",
+        version: -1,
+      },
   });
+
   const queryClient = useQueryClient();
   const dispatch = useDispatch();
+
   const saveMutation = useMutation({
     mutationFn: async (formData: IStockPutDto | IStockPostDto) => {
-      const mutationQuery = dialogUpdateContent
+      const mutationQuery = content
         ? repoStocks.Put()
         : repoStocks.Post();
       return {
@@ -73,21 +99,20 @@ export default function StockEditForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onDialogSubmit)}>
-      <DialogTitle id="form-dialog-title">
-        {!dialogUpdateContent ? "Add" : "Edit"} Stock
-      </DialogTitle>
-      <DialogContent>
-        <FormControl error>
+    <Dialog open={true} aria-labelledby="form-dialog-title">
+      <form onSubmit={handleSubmit(onDialogSubmit)}>
+        <DialogTitle id="form-dialog-title">
+          {!content ? "Add" : "Edit"} Stock
+        </DialogTitle>
+        <DialogContent>
           <Grid container spacing={1.5}>
             <Grid size={{ xs: 3 }}>
               <TextField
                 id="stockId"
                 label="Ticker Id"
                 slotProps={{
-                  input: { readOnly: !!dialogUpdateContent },
+                  input: { readOnly: !!content },
                 }}
-                defaultValue={dialogUpdateContent?.stockId}
                 type="text"
                 error={!!errors.stockId}
                 helperText={errors.stockId?.message}
@@ -101,8 +126,7 @@ export default function StockEditForm({
               <TextField
                 id="stockName"
                 label="Ticker Name"
-                defaultValue={dialogUpdateContent?.stockName}
-                type="any"
+                type="text"
                 error={!!errors.stockName}
                 helperText={errors.stockName?.message}
                 fullWidth
@@ -115,7 +139,6 @@ export default function StockEditForm({
                 select
                 id="currency"
                 label="Currency"
-                defaultValue={dialogUpdateContent?.currency}
                 error={!!errors.currency}
                 helperText={errors.currency?.message}
                 fullWidth
@@ -140,7 +163,6 @@ export default function StockEditForm({
                 select
                 id="assetClass"
                 label="Asset Class"
-                defaultValue={dialogUpdateContent?.assetClass}
                 error={!!errors.assetClass}
                 helperText={errors.assetClass?.message}
                 fullWidth
@@ -163,27 +185,34 @@ export default function StockEditForm({
               <Controller
                 control={control}
                 name="maturityDate"
-                defaultValue={dialogUpdateContent?.maturityDate ?? ""}
-                render={({ field }) => (
+                rules={{
+                  validate: (value) => {
+                    if (!value) return true;
+                    if (value === "INVALID_DATE") return "Please enter a valid date";
+                    return dayjs(value, "YYYY-MM-DD", true).isValid() || "Invalid date format";
+                  },
+                }}
+                render={({ field: { onChange, ref, value } }) => (
                   <DatePicker
-                    name="maturityDate"
                     label="Maturity Date"
                     format="YYYY-MM-DD"
-                    defaultValue={
-                      field.value ? dayjs(field.value, "YYYY-MM-DD") : null
-                    }
+                    value={value ? dayjs(value) : null}
+                    onChange={(date) => {
+                      if (date === null) {
+                        onChange("");
+                      } else if (date.isValid()) {
+                        onChange(date.format("YYYY-MM-DD"));
+                      } else {
+                        onChange("INVALID_DATE");
+                      }
+                    }}
                     slotProps={{
                       textField: {
+                        fullWidth: true,
+                        error: !!errors.maturityDate,
                         helperText: errors.maturityDate?.message,
+                        inputRef: ref,
                       },
-                    }}
-                    onChange={(date) => {
-                      console.log(date);
-                      if (date && date.isValid()) {
-                        field.onChange(date.format("YYYY-MM-DD"));
-                      } else {
-                        field.onChange("");
-                      }
                     }}
                   />
                 )}
@@ -194,12 +223,13 @@ export default function StockEditForm({
               <TextField
                 id="coupon"
                 label="Coupon"
-                defaultValue={dialogUpdateContent?.coupon}
-                type="any"
+                type="text"
                 error={!!errors.coupon}
                 helperText={errors.coupon?.message}
                 fullWidth
-                {...register("coupon")}
+                {...register("coupon", {
+                  setValueAs: (value) => (value === "" || value === null ? null : Number(value)),
+                })}
               />
             </Grid>
 
@@ -207,12 +237,13 @@ export default function StockEditForm({
               <TextField
                 id="couponFreq"
                 label="Coupon Frequency"
-                defaultValue={dialogUpdateContent?.couponFreq}
-                type="any"
+                type="text"
                 error={!!errors.couponFreq}
                 helperText={errors.couponFreq?.message}
                 fullWidth
-                {...register("couponFreq")}
+                {...register("couponFreq", {
+                  setValueAs: (value) => (value === "" || value === null ? null : Number(value)),
+                })}
               />
             </Grid>
 
@@ -220,41 +251,41 @@ export default function StockEditForm({
               <TextField
                 id="faceValue"
                 label="Face Value"
-                defaultValue={dialogUpdateContent?.faceValue}
-                type="any"
+                type="text"
                 error={!!errors.faceValue}
                 helperText={errors.faceValue?.message}
                 fullWidth
-                {...register("faceValue")}
+                {...register("faceValue", {
+                  setValueAs: (value) => (value === "" || value === null ? null : Number(value)),
+                })}
               />
             </Grid>
 
             {errors.genericErrorMsg && (
               <Grid size={{ xs: 12 }}>
-                <FormHelperText id="component-error-text">
+                <FormHelperText error id="component-error-text">
                   {errors.genericErrorMsg?.message}
                 </FormHelperText>
               </Grid>
             )}
           </Grid>
-        </FormControl>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => onDialogClose()} color="primary">
-          Cancel
-        </Button>
-        {/*Note that type=submit for a HTML form*/}
-        <Button
-          type="submit"
-          loading={saveMutation.isPending}
-          loadingPosition="start"
-          onClick={() => clearErrors()}
-          startIcon={<SaveIcon />}
-          variant="outlined"
-        >
-          {!dialogUpdateContent ? "Add" : "Edit"}
-        </Button>
-      </DialogActions>
-    </form>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => onDialogClose()} color="primary">
+            Cancel
+          </Button>
+          {/*Note that type=submit for a HTML form*/}
+          <Button
+            type="submit"
+            loading={saveMutation.isPending}
+            loadingPosition="start"
+            startIcon={<SaveIcon />}
+            variant="outlined"
+          >
+            {!content ? "Add" : "Edit"}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 }

@@ -8,7 +8,6 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
 import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
 import DeleteIcon from "@mui/icons-material/Delete";
 import SaveIcon from "@mui/icons-material/Save";
 import LockIcon from '@mui/icons-material/Lock';
@@ -155,6 +154,13 @@ export default function Watchlist() {
       columnHelper.display({
         id: "change",
         header: "Change",
+        meta: {
+          align: "right",
+          getCellSx: (row) => ({
+            ...utils.getColorClass(row.priceChange),
+            width: "0.1%",
+          })
+        },
         cell: ({ row }) => (
           <>
             <Typography variant="body1" component="p">
@@ -172,14 +178,13 @@ export default function Watchlist() {
           columnHelper.display({
             id: "action",
             header: "Action",
+            meta: { align: "right" },
             cell: ({ row }) => (
               <ConfirmationDialogWrapper
                 WrappingComponent={(props) => (
-                  <Tooltip title="Delete" aria-label="Delete">
-                    <IconButton size="small" aria-label="delete" {...props}>
-                      <DeleteIcon fontSize="inherit" />
-                    </IconButton>
-                  </Tooltip>
+                  <IconButton size="small" aria-label="delete" {...props}>
+                    <DeleteIcon fontSize="inherit" />
+                  </IconButton>
                 )}
                 title="Confirmation"
                 description={`Are you sure you want to remove ${row.original.stockName} from your watchlist?`}
@@ -244,12 +249,7 @@ export default function Watchlist() {
                     {headerGroup.headers.map((header) => (
                       <TableCell
                         key={header.id}
-                        align={
-                          header.column.id === "change" ||
-                            header.column.id === "action" ?
-                            "right" :
-                            undefined
-                        }
+                        align={header.column.columnDef.meta?.align}
                       >
                         {header.isPlaceholder ? null : (
                           <table.FlexRender header={header} />
@@ -295,25 +295,22 @@ export default function Watchlist() {
                 {!isLoading &&
                   data !== undefined &&
                   table.getRowModel().rows.map((tableRow) => {
-                    const row = tableRow.original;
+
                     return (
                       <TableRow hover key={tableRow.id}>
-                        {tableRow.getAllCells().map((cell) => (
-                          <TableCell
-                            key={cell.id}
-                            align={cell.column.id === "change" || cell.column.id === "action" ? "right" : undefined}
-                            sx={
-                              cell.column.id === "change"
-                                ? {
-                                  ...utils.getColorClass(row.priceChange),
-                                  width: "0.1%",
-                                }
-                                : undefined
-                            }
-                          >
-                            <table.FlexRender cell={cell} />
-                          </TableCell>
-                        ))}
+                        {tableRow.getAllCells().map((cell) => {
+                          const meta = cell.column.columnDef.meta;
+
+                          return (
+                            <TableCell
+                              key={cell.id}
+                              align={meta?.align}
+                              sx={meta?.getCellSx?.(tableRow.original)}
+                            >
+                              <table.FlexRender cell={cell} />
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     );
                   })}
@@ -348,7 +345,7 @@ export default function Watchlist() {
             </Table>
           </TableContainer>
         </Grid>
-      </Paper>
+      </Paper >
     </>
   );
 }

@@ -69,7 +69,7 @@ export default class repoPortfolio {
             sortBy,
             isDesc,
         }: {
-            portfolioId?: string | null | undefined,
+            portfolioId?: string | null,
             posStatus?: string | null,
             sortBy?: string | null,
             isDesc?: boolean | null,

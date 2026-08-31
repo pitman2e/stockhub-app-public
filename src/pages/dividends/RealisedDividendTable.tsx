@@ -46,12 +46,12 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import QuickSearchUtils from "../../utils/quickSearchUtils";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 
 interface IRealisedDividendTableProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
   filterStockId: string;
   filterMarket?: string;
-  isShowPortfolioId: boolean;
 }
 
 const sx_tableCellNumeric = {
@@ -81,7 +81,6 @@ export default function RealisedDividendTable({
   portfolioId,
   filterStockId,
   filterMarket,
-  isShowPortfolioId,
 }: IRealisedDividendTableProps) {
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -95,7 +94,6 @@ export default function RealisedDividendTable({
   }>({ isOpen: false, content: null });
   const [editScripDividendData, setEditScripDividendData] =
     useState<IRealisedScripPutDto | null>(null);
-  const now = dayjs();
   const realisedQuery = repoRealisedDividend.Get({
     portfolioId: portfolioId,
     stockId: filterStockId,
@@ -108,7 +106,7 @@ export default function RealisedDividendTable({
     setIsDialogOpen(false);
   };
 
-  if (isError)
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -116,27 +114,205 @@ export default function RealisedDividendTable({
     );
 
   const columns = useMemo(
-    () =>
-      columnHelper.columns([
-        columnHelper.accessor("stockId", { header: "ID" }),
+    () => {
+      const now = dayjs();
+      return columnHelper.columns([
+        columnHelper.accessor("stockId", {
+          header: "ID",
+          cell: ({ getValue }) => (
+            <StockTickerLink stockId={String(getValue())} />
+          ),
+        }),
         columnHelper.accessor("stockName", { header: "Name" }),
-        ...(isShowPortfolioId
+        ...(!portfolioId
           ? [columnHelper.accessor("portfolioId", { header: "Portfolio" })]
           : []),
-        columnHelper.accessor("exDate", { header: "Ex Date" }),
-        columnHelper.accessor("payDate", { header: "Pay Date" }),
+        columnHelper.accessor("exDate", {
+          header: "Ex Date",
+          cell: ({ getValue }) => {
+            const value = getValue();
+            return (
+              <Grid container wrap="nowrap" sx={{ alignItems: "center" }}>
+                {dayjs(value).format("YYYY-MM-DD")}
+                {dayjs(value).isAfter(now) ? (
+                  <HourglassEmptyIcon fontSize="small" />
+                ) : null}
+              </Grid>
+            );
+          },
+        }),
+        columnHelper.accessor("payDate", {
+          header: "Pay Date",
+          cell: ({ getValue }) => {
+            const value = getValue();
+            return (
+              <Grid container wrap="nowrap" sx={{ alignItems: "center" }}>
+                {dayjs(value).format("YYYY-MM-DD")}
+                {dayjs(value).isAfter(now) ? (
+                  <HourglassEmptyIcon fontSize="small" />
+                ) : null}
+              </Grid>
+            );
+          },
+        }),
         columnHelper.accessor("dividendType", { header: "Ty" }),
-        columnHelper.display({ id: "cnt", header: "Payable Unit" }),
-        columnHelper.display({ id: "payPerUnit", header: "Amt/Unit" }),
-        columnHelper.display({ id: "dividendYield", header: "Yd" }),
-        columnHelper.display({ id: "amountAdjPercentage", header: "Adj" }),
-        columnHelper.display({ id: "scripReceived", header: "Scrip Re'd" }),
-        columnHelper.display({ id: "reinvestPrice", header: "Reinv Price" }),
-        columnHelper.display({ id: "totalAmt", header: "Total Amt" }),
-        columnHelper.display({ id: "actions", header: "Action" }),
-      ]),
-    [isShowPortfolioId],
+        columnHelper.accessor("cnt", {
+          header: "Payable Unit",
+          meta: { isNumeric: true },
+          cell: ({ getValue }) => {
+            const value = getValue<number | null | undefined>();
+            return value?.toFixed(2) ?? "-";
+          },
+        }),
+        columnHelper.accessor("payPerUnit", {
+          header: "Amt/Unit",
+          meta: { isNumeric: true },
+          cell: ({ row, getValue }) => {
+            const value = getValue<number | null | undefined>();
+            return (
+              <>
+                <Typography variant="caption">{row.original.currency + " "}</Typography>
+                {value?.toFixed(2) ?? "-"}
+              </>
+            );
+          },
+        }),
+        columnHelper.accessor("dividendYield", {
+          header: "Yd",
+          meta: { isNumeric: true },
+          cell: ({ getValue }) => {
+            const value = getValue<number | null | undefined>();
+            return utils.getFmtDec(value, 2, "", "%", "-");
+          },
+        }),
+        columnHelper.accessor("amountAdjPercentage", {
+          header: "Adj",
+          meta: { isNumeric: true, isGainLoss: true },
+          cell: ({ getValue }) => {
+            const value = getValue<number | null | undefined>();
+            return value ? utils.getSignedDecimal(value, 2) + "%" : "-";
+          },
+        }),
+        columnHelper.accessor("scripReceived", {
+          header: "Scrip Re'd",
+          meta: { isNumeric: true },
+          cell: ({ row, getValue }) => {
+            const value = getValue<number | null | undefined>();
+            const isScripDistribution =
+              row.original.distributionType.indexOf("Scrip") >= 0;
+
+            return (
+              <Grid
+                container
+                wrap="nowrap"
+                sx={{ alignItems: "center", justifyContent: "flex-end" }}
+              >
+                {isScripDistribution ? value ?? "-" : "-"}
+                {isScripDistribution &&
+                  row.original.distributionType.indexOf("Cash") >= 0 ? (
+                  <IconButton
+                    aria-label="edit"
+                    sx={sx_iconButton}
+                    size="small"
+                    onClick={() => {
+                      setEditScripDividendData(row.original);
+                      setIsDialogOpen(true);
+                    }}
+                  >
+                    <EditIcon fontSize="inherit" />
+                  </IconButton>
+                ) : null}
+              </Grid>
+            );
+          },
+        }),
+        columnHelper.accessor("reinvestPrice", {
+          header: "Reinv Price",
+          meta: { isNumeric: true },
+          cell: ({ getValue }) => {
+            const value = getValue<number | null | undefined>();
+            return value ? value.toFixed(4) : "-";
+          },
+        }),
+        columnHelper.accessor("totalAmt", {
+          header: "Total Amt",
+          meta: { isNumeric: true },
+          cell: ({ row, getValue }) => {
+            const value = getValue<number | null | undefined>();
+
+            if (row.original.isMissingScripPrice) {
+              return (
+                <Tooltip title="Missing Scrip Price">
+                  <ErrorIcon sx={sx_iconButton} fontSize="small" />
+                </Tooltip>
+              );
+            }
+
+            return (
+              <Grid
+                container
+                wrap="nowrap"
+                sx={{ alignItems: "center", justifyContent: "flex-end" }}
+              >
+                <Typography variant="caption">{row.original.currency}&nbsp;</Typography>
+                <Typography variant="inherit">
+                  {value?.toFixed(2) ?? "-"}
+                </Typography>
+              </Grid>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: "Action",
+          cell: ({ row }) => {
+            const d = row.original;
+            return (
+              <Grid container wrap="nowrap">
+                <IconButton
+                  size="small"
+                  aria-label="copy"
+                  sx={sx_iconButton}
+                  disabled={isFetching}
+                  onClick={() => {
+                    const unitAmt = d.scripReceived
+                      ? (d.reinvestPrice ?? utils.round2Dec(d.totalAmt / d.scripReceived, 4))
+                      : d.payPerUnit;
+                    const txCount = d.scripReceived ? d.scripReceived : d.cnt;
+
+                    const content: ITransactionGetDto = {
+                      iden: -1,
+                      stockId: d.stockId,
+                      portfolioId: d.portfolioId,
+                      currency: d.currency,
+                      txDate: d.payDate,
+                      tranType: d.scripReceived ? "REINV" : "DIV",
+                      unitAmt: unitAmt,
+                      txCount: txCount,
+                      tax:
+                        d.stockId.endsWith(".US") && !d.scripReceived
+                          ? -utils.round2Dec(unitAmt * txCount * 0.3, 4)
+                          : null,
+                      isTransfer: false,
+                      version: 0,
+                    };
+                    setDialogStateTran({
+                      isOpen: true,
+                      content: content,
+                    });
+                  }}
+                >
+                  <ContentCopyIcon fontSize="inherit" />
+                </IconButton>
+              </Grid>
+            );
+          },
+        }),
+      ])
+    },
+    [isFetching, portfolioId],
   );
+
   const table = useTable({
     features: tableFeaturesConfig,
     columns,
@@ -145,6 +321,7 @@ export default function RealisedDividendTable({
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     globalFilterFn: "includesString" as const,
+    autoResetPageIndex: true,
     getColumnCanGlobalFilter: (column) =>
       [
         "stockId",
@@ -154,6 +331,7 @@ export default function RealisedDividendTable({
         "payDate",
         "dividendType",
       ].includes(column.id),
+    getRowId: (row) => [row.portfolioId, row.stockId, row.payDate].join("|"),
   });
 
   const quickSearchRef = useRef<HTMLInputElement | null>(null);
@@ -187,29 +365,6 @@ export default function RealisedDividendTable({
     currentPageRowCount: rows.length,
   });
 
-  type IRealisedDividendColumnKey = keyof RealisedDividend | "actions";
-
-  const isNumericColumn = (columnId: IRealisedDividendColumnKey) =>
-    ![
-      "stockId",
-      "stockName",
-      "portfolioId",
-      "exDate",
-      "payDate",
-      "dividendType",
-      "actions",
-    ].includes(columnId);
-
-  const getCellSx = (
-    columnId: IRealisedDividendColumnKey,
-    value: number | null | undefined,
-  ) => ({
-    ...(isNumericColumn(columnId) ? sx_tableCellNumeric : undefined),
-    ...(columnId === "amountAdjPercentage"
-      ? utils.getColorClass(value) ?? {}
-      : {}),
-  });
-
   return (
     <Grid container spacing={1}>
       <Grid size={{ xs: 12, lg: 6 }}>
@@ -224,8 +379,8 @@ export default function RealisedDividendTable({
         <DefaultPaper>
           <Grid container sx={{ justifyContent: "space-between" }}>
             <Grid size={{ xs: 12, sm: 'grow' }}>
-              <Typography id="tabelLabel" variant="h6">
-                Realised Dividends
+              <Typography id="tableLabel" variant="h6">
+                Realised Dividends {isError && <ImminentErrorIcon />}
               </Typography>
             </Grid>
 
@@ -238,7 +393,6 @@ export default function RealisedDividendTable({
                 value={globalFilter}
                 onChange={(event) => {
                   table.setGlobalFilter(event.target.value);
-                  setPagination((prev) => ({ ...prev, pageIndex: 0 }));
                 }}
               />
             </Grid>
@@ -253,7 +407,7 @@ export default function RealisedDividendTable({
                       <TableCell
                         key={header.id}
                         sx={
-                          isNumericColumn(header.column.id as IRealisedDividendColumnKey)
+                          header.column.columnDef.meta?.isNumeric
                             ? sx_tableCellNumeric
                             : undefined
                         }
@@ -276,189 +430,24 @@ export default function RealisedDividendTable({
                   />
                 )}
 
-                {rows.map((row) => {
-                  const d = row.original;
-                  return (
-                    <TableRow hover key={row.id}>
-                      <TableCell>
-                        <StockTickerLink stockId={d.stockId} />
-                      </TableCell>
-                      <TableCell>{d.stockName}</TableCell>
-                      {isShowPortfolioId && (
-                        <TableCell>{d.portfolioId}</TableCell>
-                      )}
-                      <TableCell>
-                        <Grid
-                          container
-                          wrap="nowrap"
-                          sx={{ alignItems: "center" }}
-                        >
-                          {dayjs(d.exDate).format("YYYY-MM-DD")}
-                          {dayjs(d.exDate).isAfter(now) ? (
-                            <HourglassEmptyIcon fontSize="small" />
-                          ) : (
-                            ""
-                          )}
-                        </Grid>
-                      </TableCell>
-                      <TableCell>
-                        <Grid
-                          container
-                          wrap="nowrap"
-                          sx={{ alignItems: "center" }}
-                        >
-                          {dayjs(d.payDate).format("YYYY-MM-DD")}
-                          {dayjs(d.payDate).isAfter(now) ? (
-                            <HourglassEmptyIcon fontSize="small" />
-                          ) : (
-                            ""
-                          )}
-                        </Grid>
-                      </TableCell>
-                      <TableCell>{d.dividendType}</TableCell>
-                      <TableCell sx={sx_tableCellNumeric}>
-                        {d.cnt.toFixed(2)}
-                      </TableCell>
-                      <TableCell sx={sx_tableCellNumeric}>
-                        <Typography variant="caption">
-                          {d.currency + " "}
-                        </Typography>
-                        {d.payPerUnit.toFixed(2)}
-                      </TableCell>
-                      <TableCell sx={sx_tableCellNumeric}>
-                        {utils.getFmtDec(d.dividendYield, 2, "", "%", "-")}
-                      </TableCell>
-                      <TableCell
-                        sx={getCellSx(
-                          "amountAdjPercentage" as IRealisedDividendColumnKey,
-                          d.amountAdjPercentage,
-                        )}
-                      >
-                        {d.amountAdjPercentage !== null
-                          ? utils.getSignedDecimal(d.amountAdjPercentage, 2) +
-                          "%"
-                          : "-"}
-                      </TableCell>
-
-                      <TableCell sx={sx_tableCellNumeric}>
-                        <Grid
-                          container
-                          wrap="nowrap"
+                {rows.map((row) => (
+                  <TableRow hover key={row.id}>
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta;
+                      return (
+                        <TableCell
+                          key={cell.id}
                           sx={{
-                            alignItems: "center",
-                            justifyContent: "flex-end",
+                            ...(meta?.isNumeric ? sx_tableCellNumeric : {}),
+                            ...(meta?.isGainLoss ? utils.getColorClass(cell.getValue() as number) : {}),
                           }}
                         >
-                          {d.distributionType.indexOf("Scrip") >= 0
-                            ? d.scripReceived
-                            : "-"}
-                          {d.distributionType.indexOf("Scrip") >= 0 &&
-                            d.distributionType.indexOf("Cash") >= 0 ? (
-                            <Tooltip title="Edit" aria-label="Edit">
-                              <IconButton
-                                aria-label="edit"
-                                sx={sx_iconButton}
-                                size="small"
-                                onClick={() => {
-                                  setEditScripDividendData(d);
-                                  setIsDialogOpen(true);
-                                }}
-                              >
-                                <EditIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                          ) : (
-                            ""
-                          )}
-                        </Grid>
-                      </TableCell>
-
-                      <TableCell sx={sx_tableCellNumeric}>
-                        {d.reinvestPrice ? d.reinvestPrice.toFixed(4) : "-"}
-                      </TableCell>
-
-                      <TableCell>
-                        <Grid
-                          container
-                          wrap="nowrap"
-                          sx={{
-                            alignItems: "center",
-                            justifyContent: "flex-end",
-                          }}
-                        >
-                          {d.isMissingScripPrice ? (
-                            <Tooltip title="Missing Scrip Price">
-                              <ErrorIcon sx={sx_iconButton} fontSize="small" />
-                            </Tooltip>
-                          ) : (
-                            <>
-                              <Typography variant="caption">
-                                {d.currency}&nbsp;
-                              </Typography>
-                              <Typography variant="inherit">
-                                {d.totalAmt.toFixed(2)}
-                              </Typography>
-                            </>
-                          )}
-                        </Grid>
-                      </TableCell>
-                      <TableCell>
-                        <Grid container wrap="nowrap">
-                          <Tooltip
-                            title="Copy as Transaction"
-                            aria-label="Copy as Transaction"
-                          >
-                            <IconButton
-                              size="small"
-                              aria-label="copy"
-                              sx={sx_iconButton}
-                              disabled={isFetching}
-                              onClick={() => {
-                                const unitAmt = d.scripReceived
-                                  ? (d.reinvestPrice ??
-                                    utils.round2Dec(
-                                      d.totalAmt / d.scripReceived,
-                                      4,
-                                    ))
-                                  : d.payPerUnit;
-                                const txCount = d.scripReceived
-                                  ? d.scripReceived
-                                  : d.cnt;
-
-                                const content: ITransactionGetDto = {
-                                  iden: -1,
-                                  stockId: d.stockId,
-                                  portfolioId: d.portfolioId,
-                                  currency: d.currency,
-                                  txDate: d.payDate,
-                                  tranType: d.scripReceived ? "REINV" : "DIV",
-                                  unitAmt: unitAmt,
-                                  txCount: txCount,
-                                  tax:
-                                    d.stockId.endsWith(".US") &&
-                                      !d.scripReceived
-                                      ? -utils.round2Dec(
-                                        unitAmt * txCount * 0.3,
-                                        4,
-                                      )
-                                      : null, //TODO: Do not hardcode tax rate
-                                  isTransfer: false,
-                                  version: 0,
-                                };
-                                setDialogStateTran({
-                                  isOpen: true,
-                                  content: content,
-                                });
-                              }}
-                            >
-                              <ContentCopyIcon fontSize="inherit" />
-                            </IconButton>
-                          </Tooltip>
-                        </Grid>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
                 {emptyRowsCount > 0 && (
                   <TableRow sx={{ height: 33.0167 * emptyRowsCount }}>
                     <TableCell colSpan={15} />
@@ -483,14 +472,14 @@ export default function RealisedDividendTable({
               });
             }}
           />
-          <Dialog open={isDialogOpen} aria-labelledby="form-dialog-title">
-            {editScripDividendData !== null && (
-              <EditFormDividend
-                onDialogClose={onDialogClose}
-                data={editScripDividendData}
-              ></EditFormDividend>
-            )}
-          </Dialog>
+          
+          {isDialogOpen && editScripDividendData !== null && (
+            <EditFormDividend
+              onDialogClose={onDialogClose}
+              data={editScripDividendData}
+            ></EditFormDividend>
+          )}
+
           {dialogStateTran.isOpen && (
             <EditFormTrans
               onDialogClose={() =>

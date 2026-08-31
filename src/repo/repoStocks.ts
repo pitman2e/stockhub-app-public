@@ -43,17 +43,11 @@ export default class repoStocks {
         };
     }
 
-    static Delete(
-        {
-            stockId,
-        }: {
-            stockId: string;
-        }
-    ) {
+    static Delete() {
         const baseUrl = repoStocks.baseUrl;
-        const url = baseUrl + "/" + utils.getQueryRoute(stockId);
+
         return {
-            requestFn: () => utils.requestWithToken('DELETE', url),
+            requestFn: (content: any) => utils.requestWithToken('DELETE', baseUrl, content),
             invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
         };
     }

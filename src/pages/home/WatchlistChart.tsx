@@ -84,6 +84,11 @@ export default function WatchlistChart({ stockId }: IWatchlistChartProps) {
       legend: {
         display: false,
       },
+      tooltip: {
+        filter: (tooltipItem) => tooltipItem.datasetIndex === 0,
+        yAlign: "center", // Moves tooltip to the side of the cursor
+        caretPadding: 15, // Adds spacing from the cursor
+      },
     },
   };
 
@@ -106,59 +111,70 @@ export default function WatchlistChart({ stockId }: IWatchlistChartProps) {
       }}
     >
       {qry.data && (
-        <Line
-          options={options_min}
-          data={{
-            labels: curTradeTimestamps.map((timestamp) =>
-              dayjs.unix(timestamp).format("MM-DD HH:mm"),
-            ),
-            datasets: [
-              {
-                data: curTradePrices,
-                borderWidth: 1.1,
-                pointRadius: 0,
+        <Box //Hacky way to expand the canvas a little bit more
+          sx={{
+            position: "absolute",
+            top: "-0.3em",   // Shifts canvas upward
+            left: 0,
+            height: "3.5em",   // Expanded height (larger than parent's 3em)
+            width: "100%",   // Can also be expanded (e.g., "120%")
+          }}
+        >
+          <Line
+            options={options_min}
+            data={{
+              labels: curTradeTimestamps.map((timestamp) =>
+                dayjs.unix(timestamp).format("MM-DD HH:mm"),
+              ),
+              datasets: [
+                {
+                  data: curTradePrices,
+                  borderWidth: 1.1,
+                  pointRadius: 0,
 
-                // Mouse hover legend color
-                pointBackgroundColor: (ctx) => {
-                  const price = ctx.parsed.y;
+                  // Mouse hover legend color
+                  pointBackgroundColor: (ctx) => {
+                    const price = ctx.parsed.y;
 
-                  if (price == null) {
-                    return undefined;
-                  }
-
-                  return price >= prevClosePrice
-                    ? theme.deltaColor.up.color
-                    : theme.deltaColor.down.color;
-                },
-
-                // Line color
-                segment: {
-                  borderColor: (ctx) => {
-                    const p0 = ctx.p0.parsed.y;
-                    const p1 = ctx.p1.parsed.y;
-
-                    if (p0 == null || p1 == null) {
+                    if (price == null) {
                       return undefined;
                     }
 
-                    return p0 >= prevClosePrice && p1 >= prevClosePrice
+                    return price >= prevClosePrice
                       ? theme.deltaColor.up.color
                       : theme.deltaColor.down.color;
                   },
+
+                  // Line color
+                  segment: {
+                    borderColor: (ctx) => {
+                      const p0 = ctx.p0.parsed.y;
+                      const p1 = ctx.p1.parsed.y;
+
+                      if (p0 == null || p1 == null) {
+                        return undefined;
+                      }
+
+                      return p0 >= prevClosePrice && p1 >= prevClosePrice
+                        ? theme.deltaColor.up.color
+                        : theme.deltaColor.down.color;
+                    },
+                  },
                 },
-              },
-              {
-                fill: false,
-                backgroundColor: theme.chartGreyLine.color,
-                borderColor: theme.chartGreyLine.color,
-                borderDash: [5, 5],
-                borderWidth: 0.3,
-                pointRadius: 0,
-                data: Array(curTradeTimestamps.length).fill(prevClosePrice),
-              },
-            ],
-          }}
-        ></Line>
+                {
+                  fill: false,
+                  backgroundColor: theme.chartGreyLine.color,
+                  borderColor: theme.chartGreyLine.color,
+                  borderDash: [5, 5],
+                  borderWidth: 0.3,
+                  pointRadius: 0,
+                  pointHoverRadius: 0,
+                  data: Array(curTradeTimestamps.length).fill(prevClosePrice),
+                },
+              ],
+            }}
+          ></Line>
+        </Box>
       )}
     </Box>
   );

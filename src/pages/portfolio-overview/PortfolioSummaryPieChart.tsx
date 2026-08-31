@@ -16,7 +16,6 @@ import {
   MenuItem,
   Select,
   FormControl,
-  Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
@@ -30,7 +29,7 @@ import { MTags } from "./MTags";
 import repoTags from "../../repo/repoTags";
 
 interface IPortfolioSummaryPieChartProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
 }
 
 type DoughnutOptions = ComponentProps<typeof Doughnut>["options"];
@@ -123,18 +122,16 @@ export function PortfolioSummaryPieChart({
             </Typography>
           </Grid>
 
-          <Tooltip title="Edit" aria-label="Edit">
-            <IconButton
-              disabled={!dataFilter.tag}
-              onClick={() =>
-                setDialogStateTag({ isOpen: true, content: dataFilter.tag })
-              }
-              size="small"
-              aria-label="edit"
-            >
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
+          <IconButton
+            disabled={!dataFilter.tag}
+            onClick={() =>
+              setDialogStateTag({ isOpen: true, content: dataFilter.tag })
+            }
+            size="small"
+            aria-label="edit"
+          >
+            <EditIcon />
+          </IconButton>
         </Grid>
 
         <FormControl sx={{ m: 1, minWidth: 120 }}>

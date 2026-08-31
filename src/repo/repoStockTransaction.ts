@@ -17,14 +17,14 @@ export default class repoStockTransaction {
             limit,
             offset,
         }: {
-            portfolioId?: string | null | undefined;
-            stockId?: string | null | undefined;
-            transactionType?: string | null | undefined;
-            market?: string | null | undefined;
-            fmDate?: number | null | undefined;
-            toDate?: number | null | undefined;
-            limit?: number | null | undefined;
-            offset?: number | null | undefined;
+            portfolioId?: string | null;
+            stockId?: string | null;
+            transactionType?: string | null;
+            market?: string | null;
+            fmDate?: number | null;
+            toDate?: number | null;
+            limit?: number | null;
+            offset?: number | null;
         } = {}
     ) {
         const baseUrl = repoStockTransaction.baseUrl;

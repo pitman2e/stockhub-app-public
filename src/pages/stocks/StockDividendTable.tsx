@@ -39,6 +39,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { AxiosError } from "axios";
+import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 
 const tableFeaturesConfig = tableFeatures({
   rowPaginationFeature,
@@ -60,8 +61,8 @@ const sx_iconButton = {
 };
 
 interface IStockDividendTableProps {
-  portfolioId?: string | undefined;
-  stockId?: string | undefined;
+  portfolioId?: string;
+  stockId?: string;
 }
 
 //Functional Component
@@ -112,7 +113,7 @@ export default function StockDividendTable({
     },
   });
 
-  if (isError)
+  if (isError && !data)
     return (
       <DefaultPaper>
         <DefaultErrorPlaceholder />
@@ -158,6 +159,7 @@ export default function StockDividendTable({
         }),
         columnHelper.accessor("amount", {
           header: "Amt/Unit",
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.amount === null ? (
               "-"
@@ -172,6 +174,7 @@ export default function StockDividendTable({
         }),
         columnHelper.accessor("amountAdjPercentage", {
           header: "Adj",
+          meta: { isNumeric: true, isGainLoss: true },
           cell: ({ row }) =>
             row.original.amountAdjPercentage !== null
               ? `${utils.getSignedDecimal(row.original.amountAdjPercentage, 2)}%`
@@ -179,6 +182,7 @@ export default function StockDividendTable({
         }),
         columnHelper.accessor("scripPerCount", {
           header: "Scrip Bonus",
+          meta: { isNumeric: true },
           cell: ({ row }) =>
             row.original.scripPerCount
               ? `1/${row.original.scripPerCount}`
@@ -186,6 +190,7 @@ export default function StockDividendTable({
         }),
         columnHelper.accessor("scripPrice", {
           header: "Scrip Price",
+          meta: { isNumeric: true },
           cell: ({ row }) => (
             <Grid
               container
@@ -219,9 +224,11 @@ export default function StockDividendTable({
   const table = useTable({
     features: tableFeaturesConfig,
     columns,
-    data: isSuccess ? data : [],
+    data: data ?? [],
     state: { pagination },
     onPaginationChange: setPagination,
+    getRowId: (row) => [row.stockId].join("|"),
+    autoResetPageIndex: true,
   });
 
   const rows = table.getRowModel().rows;
@@ -233,26 +240,6 @@ export default function StockDividendTable({
     currentPageRowCount: rows.length,
   });
 
-  type IStockDividendColumnKey = keyof IStockDividend | "actions";
-
-  const isNumericColumn = (columnId: IStockDividendColumnKey) =>
-    columnId !== "stockId" &&
-    columnId !== "exDate" &&
-    columnId !== "payableDate" &&
-    columnId !== "dividendEvent" &&
-    columnId !== "dividendType" &&
-    columnId !== "actions";
-
-  const getCellSx = (
-    columnId: IStockDividendColumnKey,
-    value: number | null | undefined,
-  ) => ({
-    ...(isNumericColumn(columnId) ? sx_tableCellNumeric : undefined),
-    ...(columnId === "amountAdjPercentage"
-      ? utils.getColorClass(value) ?? {}
-      : {}),
-  });
-
   return (
     <>
       {isFetching && <DefaultLinearProgress />}
@@ -260,7 +247,7 @@ export default function StockDividendTable({
         <Grid container>
           <Grid size="grow">
             <Typography variant="h6" gutterBottom>
-              Ticker Dividends
+              Ticker Dividends {isError && <ImminentErrorIcon />}
             </Typography>
           </Grid>
           {!!stockId && (
@@ -288,7 +275,7 @@ export default function StockDividendTable({
                     <TableCell
                       key={header.id}
                       sx={
-                        isNumericColumn(header.column.id as IStockDividendColumnKey)
+                        header.column.columnDef.meta?.isNumeric
                           ? sx_tableCellNumeric
                           : undefined
                       }
@@ -313,17 +300,20 @@ export default function StockDividendTable({
               {isSuccess &&
                 rows.map((row) => (
                   <TableRow hover key={row.id}>
-                    {row.getAllCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        sx={getCellSx(
-                          cell.column.id as IStockDividendColumnKey,
-                          cell.getValue() as number | null | undefined,
-                        )}
-                      >
-                        <table.FlexRender cell={cell} />
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          sx={{
+                            ...(meta?.isNumeric ? sx_tableCellNumeric : {}),
+                            ...(meta?.isGainLoss ? utils.getColorClass(cell.getValue() as number) : {}),
+                          }}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      );
+                    })}
                   </TableRow>
                 ))}
               {emptyRowsCount > 0 && (
@@ -350,12 +340,11 @@ export default function StockDividendTable({
             });
           }}
         />
-        <Dialog open={isDialogOpen} aria-labelledby="form-dialog-title">
+        {isDialogOpen &&
           <EditFormScripPrice
             onDialogClose={onDialogClose}
             data={editScripDividendData}
-          />
-        </Dialog>
+          />}
       </DefaultPaper>
     </>
   );

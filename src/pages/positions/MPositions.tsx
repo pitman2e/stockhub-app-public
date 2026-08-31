@@ -26,7 +26,7 @@ export function MPositions() {
           <Grid size={{ xs: 12 }}>
             <PositionsTable
               portfolioId={portfolioId}
-              isShowPortfolioId={false}
+              isRealPortfolio={false}
             />
           </Grid>
         </Grid>

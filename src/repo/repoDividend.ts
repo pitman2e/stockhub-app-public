@@ -9,8 +9,8 @@ export default class repoDividend {
       portfolioId,
       stockId,
     }: {
-      portfolioId?: string | null | undefined;
-      stockId?: string | null | undefined;
+      portfolioId?: string | null;
+      stockId?: string | null;
     } = {}
   ) {
     const baseUrl = repoDividend.baseUrl;
