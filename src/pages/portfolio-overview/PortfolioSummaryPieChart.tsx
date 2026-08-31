@@ -16,7 +16,6 @@ import {
   MenuItem,
   Select,
   FormControl,
-  Tooltip,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
@@ -28,12 +27,16 @@ import { Doughnut } from "react-chartjs-2";
 import { IChartJsDataSet } from "../../types/api";
 import { MTags } from "./MTags";
 import repoTags from "../../repo/repoTags";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+import * as chartJsTouchUtils from "../../utils/chartJsTouchUtils";
 
 interface IPortfolioSummaryPieChartProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
 }
 
 type DoughnutOptions = ComponentProps<typeof Doughnut>["options"];
+
+const clearTouchPlugin = chartJsTouchUtils.createClearTouchPlugin();
 
 export function PortfolioSummaryPieChart({
   portfolioId,
@@ -48,10 +51,11 @@ export function PortfolioSummaryPieChart({
   }>({ isOpen: false, content: "" });
   const theme = useTheme();
   const { data, isFetching, isSuccess, isError } = useQuery(
-    repoTags.GetPortfolioPie({ portfolioId, ...dataFilter }),
+    ApiRequestAdapter.queryOptions(repoTags.GetPortfolioPie({ portfolioId, ...dataFilter })),
   );
 
   const options: DoughnutOptions = {
+    events: [...chartJsTouchUtils.touchSafeChartEvents],
     aspectRatio: 3,
     plugins: {
       legend: {
@@ -123,18 +127,16 @@ export function PortfolioSummaryPieChart({
             </Typography>
           </Grid>
 
-          <Tooltip title="Edit" aria-label="Edit">
-            <IconButton
-              disabled={!dataFilter.tag}
-              onClick={() =>
-                setDialogStateTag({ isOpen: true, content: dataFilter.tag })
-              }
-              size="small"
-              aria-label="edit"
-            >
-              <EditIcon />
-            </IconButton>
-          </Tooltip>
+          <IconButton
+            disabled={!dataFilter.tag}
+            onClick={() =>
+              setDialogStateTag({ isOpen: true, content: dataFilter.tag })
+            }
+            size="small"
+            aria-label="edit"
+          >
+            <EditIcon />
+          </IconButton>
         </Grid>
 
         <FormControl sx={{ m: 1, minWidth: 120 }}>
@@ -182,7 +184,13 @@ export function PortfolioSummaryPieChart({
             aspectRatio: "1040/346",
           }}
         >
-          {isSuccess && <Doughnut data={data} options={options} />}
+          {isSuccess && (
+            <Doughnut
+              data={data}
+              options={options}
+              plugins={[clearTouchPlugin]}
+            />
+          )}
           {!isSuccess && <CircularProgress />}
         </Container>
       </Paper>

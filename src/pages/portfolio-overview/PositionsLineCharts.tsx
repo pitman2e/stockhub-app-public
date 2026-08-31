@@ -16,28 +16,22 @@ import utc from "dayjs/plugin/utc";
 import CircularProgress from "@mui/material/CircularProgress";
 import { useTheme } from "@mui/material/styles";
 import repoPortfolio from "../../repo/repoPortfolio";
-import { IChartJsDataSet } from "../../types/api";
+import { IChartJsDataSet, IPositionChartData } from "../../types/api";
 import DateRangeSelector, {
   getPresetDates,
 } from "../../components/DateRangeSelector";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+import * as chartJsTouchUtils from "../../utils/chartJsTouchUtils";
 
 interface IPositionsLineChartsProps {
   portfolioId?: string;
   stockId?: string;
 }
 
-interface IPositionChartData {
-  labels?: string[];
-  unrealisedDatasets: IChartJsDataSet[];
-  totalGainDatasets: IChartJsDataSet[];
-  totalGainOffsetDatasets: IChartJsDataSet[];
-  dailyGainDatasets: IChartJsDataSet[];
-  unrealisedCostDatasets: IChartJsDataSet[];
-  dailyRealisedDividendDatasets: IChartJsDataSet[];
-}
-
 type BarOptions = ComponentProps<typeof Bar>["options"];
 type LineOptions = ComponentProps<typeof Line>["options"];
+
+const clearTouchPlugin = chartJsTouchUtils.createClearTouchPlugin();
 
 export function PositionsLineCharts({
   portfolioId,
@@ -68,7 +62,7 @@ export function PositionsLineCharts({
   };
 
   const { isError, data, isFetching, isSuccess } = useQuery<IPositionChartData>(
-    repoPortfolio.GetPositionChart(queryKeys),
+    ApiRequestAdapter.queryOptions(repoPortfolio.GetPositionChart(queryKeys)),
   );
 
   if (isError)
@@ -79,6 +73,7 @@ export function PositionsLineCharts({
     );
 
   const options: BarOptions & LineOptions = {
+    events: [...chartJsTouchUtils.touchSafeChartEvents],
     responsive: true,
     maintainAspectRatio: true,
     backgroundColor: theme.palette.primary.main, //Point, Bar
@@ -184,6 +179,7 @@ export function PositionsLineCharts({
               <Line
                 data={{ labels: labels, datasets: data?.unrealisedDatasets }}
                 options={options}
+                plugins={[clearTouchPlugin]}
               />
             )}
 
@@ -212,6 +208,7 @@ export function PositionsLineCharts({
               <Line
                 data={{ labels: labels, datasets: data?.totalGainDatasets }}
                 options={options}
+                plugins={[clearTouchPlugin]}
               />
             )}
 
@@ -243,6 +240,7 @@ export function PositionsLineCharts({
                   datasets: data?.totalGainOffsetDatasets,
                 }}
                 options={options}
+                plugins={[clearTouchPlugin]}
               />
             )}
 
@@ -271,6 +269,7 @@ export function PositionsLineCharts({
               <Bar
                 data={{ labels: labels, datasets: data?.dailyGainDatasets }}
                 options={options}
+                plugins={[clearTouchPlugin]}
               />
             )}
 
@@ -302,6 +301,7 @@ export function PositionsLineCharts({
                   datasets: data?.unrealisedCostDatasets,
                 }}
                 options={options}
+                plugins={[clearTouchPlugin]}
               />
             )}
 
@@ -333,6 +333,7 @@ export function PositionsLineCharts({
                   datasets: data?.dailyRealisedDividendDatasets,
                 }}
                 options={options}
+                plugins={[clearTouchPlugin]}
               />
             )}
 

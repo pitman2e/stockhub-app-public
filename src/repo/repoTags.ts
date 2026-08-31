@@ -1,18 +1,14 @@
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString, getApiRoute } from "./apiRequest";
+import { IChartJsDataSets } from "../types/api";
 
 export default class repoTags {
   static readonly baseUrl = "api/Tags";
 
   static Get({ category }: { category?: string | null } = {}) {
     const baseUrl = repoTags.baseUrl;
-    const url = baseUrl + "/" + utils.getQueryRoute(category);
+    const url = baseUrl + "/" + getApiRoute(category);
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl, category }),
-      queryFn: utils.getReactQueryFn<string>(url),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest<string>(baseUrl, url);
   }
 
   static GetPortfolioPie(
@@ -20,22 +16,15 @@ export default class repoTags {
   ) {
     const baseUrl = repoTags.baseUrl + "/Pie";
     const url = baseUrl + "/" +
-      utils.getQueryRoute(portfolioId) + "?" +
-      utils.getQueryStringFromDict({ tag, assetClass })
+      getApiRoute(portfolioId) + "?" +
+      getApiQueryString({ tag, assetClass })
 
-    return {
-      ...utils.reactQueryDefaults,
-      queryKey: utils.getUserQueryKey({ baseUrl: repoTags.baseUrl, url, portfolioId, tag, assetClass }),
-      queryFn: utils.getReactQueryFn(url),
-    }
+    return createApiRequest<IChartJsDataSets>(repoTags.baseUrl, url);
   }
 
   static Post() {
     const baseUrl = repoTags.baseUrl;
 
-    return {
-      requestFn: (content: any) => utils.requestWithToken("POST", baseUrl, content),
-      invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-    };
+    return createApiRequest(baseUrl, baseUrl, "POST");
   }
 }

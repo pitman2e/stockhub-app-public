@@ -1,14 +1,11 @@
-import utils from "../utils/utils";
+import { createApiRequest } from "./apiRequest";
 
 export class repoStockRealisedScrip {
-    static readonly baseUrl = "api/StockRealisedScrip";
+  static readonly baseUrl = "api/StockRealisedScrip";
 
-    static Put() {
-        const baseUrl = repoStockRealisedScrip.baseUrl;
+  static Put() {
+    const baseUrl = repoStockRealisedScrip.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('PUT', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl }),
-        };
-    }
+    return createApiRequest(baseUrl, baseUrl, "PUT");
+  }
 }

@@ -17,7 +17,16 @@ import { DefaultErrorPlaceholder } from "../components/DefaultComponents";
 import { DrawerContext } from "./App";
 import Box from "@mui/material/Box";
 import repoPortfolio from "../repo/repoPortfolio";
-import utils from "../utils/utils";
+import ApiRequestAdapter from "../adapters/apiRequestAdapter";
+import {
+  ROUTE_PATHS,
+  getDividendPath,
+  getPortfolioOverviewPath,
+  getPositionsPath,
+  getTickerOverviewPath,
+  getTransactionPath,
+  isRouteActive,
+} from "../routes";
 
 const sx_nested = {
   paddingLeft: 4,
@@ -41,7 +50,7 @@ function PortfolioDetailListItemText({ title }: { title: string }) {
 }
 
 interface IPortfolioGroupMenuProps {
-  data: { portfolioId: string; portfolioName: string };
+  data: { portfolioId: string; name: string };
 }
 
 function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
@@ -66,7 +75,7 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
               sx={{ paddingLeft: 2, my: 0 }}
               disableTypography={true}
               primary={
-                <Typography variant="button">{data.portfolioName}</Typography>
+                <Typography variant="button">{data.name}</Typography>
               }
             />
           </ListItemButton>
@@ -76,10 +85,12 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
               onClick={drawerCtt.onMenuItemClick}
               sx={sx_nested_6sp}
               component={Link}
-              to={"/portfolio-overview/" + data.portfolioId}
-              selected={
-                location.pathname === "/portfolio-overview/" + data.portfolioId
-              }
+              to={getPortfolioOverviewPath(data.portfolioId)}
+              selected={isRouteActive(
+                location.pathname,
+                ROUTE_PATHS.portfolioOverview,
+                data.portfolioId,
+              )}
               color="primary"
             >
               <PortfolioDetailListItemText title="Portfolio Overview" />
@@ -89,8 +100,12 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
               onClick={drawerCtt.onMenuItemClick}
               sx={sx_nested_6sp}
               component={Link}
-              to={"/positions/" + data.portfolioId}
-              selected={location.pathname === "/positions/" + data.portfolioId}
+              to={getPositionsPath(data.portfolioId)}
+              selected={isRouteActive(
+                location.pathname,
+                ROUTE_PATHS.positions,
+                data.portfolioId,
+              )}
               color="primary"
             >
               <PortfolioDetailListItemText title="Positions" />
@@ -100,10 +115,12 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
               onClick={drawerCtt.onMenuItemClick}
               sx={sx_nested_6sp}
               component={Link}
-              to={"/transaction/" + data.portfolioId}
-              selected={
-                location.pathname === "/transaction/" + data.portfolioId
-              }
+              to={getTransactionPath(data.portfolioId)}
+              selected={isRouteActive(
+                location.pathname,
+                ROUTE_PATHS.transaction,
+                data.portfolioId,
+              )}
               color="primary"
             >
               <PortfolioDetailListItemText title="Transactions" />
@@ -113,8 +130,12 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
               onClick={drawerCtt.onMenuItemClick}
               sx={sx_nested_6sp}
               component={Link}
-              to={"/dividend/" + data.portfolioId}
-              selected={location.pathname === "/dividend/" + data.portfolioId}
+              to={getDividendPath(data.portfolioId)}
+              selected={isRouteActive(
+                location.pathname,
+                ROUTE_PATHS.dividend,
+                data.portfolioId,
+              )}
               color="primary"
             >
               <PortfolioDetailListItemText title="Dividends" />
@@ -127,13 +148,14 @@ function PortfolioGroupMenu({ data }: IPortfolioGroupMenuProps) {
 }
 
 export function AppDrawer() {
-  const { isLoading, isError, data } = useQuery(repoPortfolio.GetSummary());
+  const { isLoading, isError, data } = useQuery(
+    ApiRequestAdapter.queryOptions(repoPortfolio.GetSummary()),
+  );
   const location = useLocation();
-  const pingQuery = repoUser.Ping();
+  const pingQuery = ApiRequestAdapter.queryOptions(repoUser.Ping());
 
   useQuery({
-    queryFn: pingQuery.requestFn,
-    queryKey: pingQuery.invalidateQueryKey,
+    ...pingQuery,
     refetchIntervalInBackground: true,
     refetchInterval: 60 * 1000,
   });
@@ -148,8 +170,8 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/"
-            selected={location.pathname === "/"}
+            to={ROUTE_PATHS.home}
+            selected={isRouteActive(location.pathname, ROUTE_PATHS.home)}
             color="primary"
           >
             <ListItemText primary="Dashboard" />
@@ -159,8 +181,11 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/portfolio-overview/"
-            selected={location.pathname === "/portfolio-overview/"}
+            to={getPortfolioOverviewPath()}
+            selected={isRouteActive(
+              location.pathname,
+              ROUTE_PATHS.portfolioOverview,
+            )}
             color="primary"
           >
             <ListItemText primary="Portfolios Overview" />
@@ -170,8 +195,11 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/portfolios-details/"
-            selected={location.pathname === "/portfolios-details/"}
+            to={ROUTE_PATHS.portfoliosDetails}
+            selected={isRouteActive(
+              location.pathname,
+              ROUTE_PATHS.portfoliosDetails,
+            )}
             color="primary"
           >
             <ListItemText primary="Portfolios Details" />
@@ -181,8 +209,8 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/positions/"
-            selected={location.pathname === "/positions/"}
+            to={getPositionsPath()}
+            selected={isRouteActive(location.pathname, ROUTE_PATHS.positions)}
             color="primary"
           >
             <ListItemText primary="Positions" />
@@ -192,8 +220,8 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/transaction/"
-            selected={location.pathname === "/transaction/"}
+            to={getTransactionPath()}
+            selected={isRouteActive(location.pathname, ROUTE_PATHS.transaction)}
             color="primary"
           >
             <ListItemText primary="Transactions" />
@@ -203,8 +231,8 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/dividend/"
-            selected={location.pathname === "/dividend/"}
+            to={getDividendPath()}
+            selected={isRouteActive(location.pathname, ROUTE_PATHS.dividend)}
             color="primary"
           >
             <ListItemText primary="Dividends" />
@@ -214,8 +242,11 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/ticker-overview/"
-            selected={location.pathname === "/ticker-overview/"}
+            to={getTickerOverviewPath()}
+            selected={isRouteActive(
+              location.pathname,
+              ROUTE_PATHS.tickerOverview,
+            )}
             color="primary"
           >
             <ListItemText primary="Ticker Overview" />
@@ -242,7 +273,7 @@ export function AppDrawer() {
 
           {!!data &&
             data.details.map((p) => (
-              <PortfolioGroupMenu key={p.portfolioId} data={p} />
+              <PortfolioGroupMenu key={p.portfolio.portfolioId} data={p.portfolio} />
             ))}
 
           <ListSubheader disableSticky>Virtual Portfolios</ListSubheader>
@@ -251,7 +282,7 @@ export function AppDrawer() {
 
           {!!data &&
             data.virtualPortfolioDetails.map((p) => (
-              <PortfolioGroupMenu key={p.portfolioId} data={p} />
+              <PortfolioGroupMenu key={p.portfolio.portfolioId} data={p.portfolio} />
             ))}
 
           <ListSubheader disableSticky>Closed Portfolios</ListSubheader>
@@ -260,7 +291,7 @@ export function AppDrawer() {
 
           {!!data &&
             data.closedDetails.map((p) => (
-              <PortfolioGroupMenu key={p.portfolioId} data={p} />
+              <PortfolioGroupMenu key={p.portfolio.portfolioId} data={p.portfolio} />
             ))}
 
           <ListSubheader disableSticky>Administration</ListSubheader>
@@ -269,8 +300,8 @@ export function AppDrawer() {
             sx={sx_nested}
             onClick={drawerCtt.onMenuItemClick}
             component={Link}
-            to="/admin"
-            selected={location.pathname === "/admin"}
+            to={ROUTE_PATHS.admin}
+            selected={isRouteActive(location.pathname, ROUTE_PATHS.admin)}
             color="primary"
           >
             <ListItemText primary="Data Administration" />

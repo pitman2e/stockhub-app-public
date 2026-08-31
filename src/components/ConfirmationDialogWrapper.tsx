@@ -15,7 +15,7 @@ interface IConfirmationDialogWrapperProps {
   title: string;
   description: string;
   onDialogConfirm: () => Promise<void>;
-  onDialogCancel?: (() => void) | undefined | null;
+  onDialogCancel?: (() => void) | null;
   confirmCooldownTimer?: number;
   disabled?: boolean;
 }

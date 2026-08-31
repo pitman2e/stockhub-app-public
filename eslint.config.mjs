@@ -27,7 +27,7 @@ export default defineConfig([
   {
     "rules": {
       "@typescript-eslint/no-unused-vars": [
-        "warning",
+        "warn",
         {
           "args": "all",
           "argsIgnorePattern": "^_",
@@ -37,7 +37,14 @@ export default defineConfig([
           "varsIgnorePattern": "^_",
           "ignoreRestSiblings": true
         }
-      ]
+      ],
+      "indent": ["error", 2, { "SwitchCase": 1 }],
+      "padding-line-between-statements": [
+        "error",
+        { "blankLine": "always", "prev": "function", "next": "function" }
+      ],
+      "lines-between-class-members": ["error", "always", { "exceptAfterSingleLine": false }],
+      "no-multiple-empty-lines": ["error", { "max": 1 }]
     }
   }
 ]);

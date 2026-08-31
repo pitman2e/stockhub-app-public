@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import ConfirmationDialogWrapper from "../components/ConfirmationDialogWrapper";
+import ConfirmationDialogWrapper from "../../components/ConfirmationDialogWrapper";
 
 describe("ConfirmationDialogWrapper", () => {
   it("forwards the disabled state to the wrapped action button", () => {

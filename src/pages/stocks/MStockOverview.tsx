@@ -2,7 +2,8 @@ import React, { ComponentProps, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import StockIdAutocomplete from "../../components/StockIdAutocomplete";
 import { useParams, useNavigate } from "react-router-dom";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
+import { getTickerOverviewPath } from "../../routes";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -18,20 +19,22 @@ import dayjs from "dayjs";
 import Button from "@mui/material/Button";
 import ButtonGroup from "@mui/material/ButtonGroup";
 import StockDividendTable from "./StockDividendTable";
+import TickerPerformance from "./TickerPerformance";
 import StocksTable from "./StocksTable";
+import TickerInfo from "./TickerInfo";
 
 //https://www.chartjs.org/docs/3.3.0/getting-started/integration.html#bundlers-webpack-rollup-etc
 import "chart.js/auto";
 import { Line } from "react-chartjs-2";
 import AssetClassSelect from "../../components/AssetClassSelect";
 import repoStockPrice from "../../repo/repoStockPrice";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 export function MStockOverview() {
   const navigate = useNavigate();
   const { portfolioId, stockId } = useParams();
   const [dateBack, setDateBack] = useState(6);
   const [assetClasses, setAssetClasses] = useState(["STOCK"]);
-  const [nav2StockId, setNav2StockId] = useState<string>("");
 
   React.useEffect(() => {
     document.title = utils.getDocumentTitle("Ticker Overview");
@@ -49,30 +52,19 @@ export function MStockOverview() {
   };
 
   const { data: dataChart, isFetching } = useQuery({
-    ...repoStockPrice.GetStockPricesChart(queryKeys),
+    ...ApiRequestAdapter.queryOptions(repoStockPrice.GetStockPricesChart(queryKeys)),
     enabled: Boolean(stockId),
-  });
-
-  const { data: dataPerf } = useQuery({
-    ...repoStockPrice.GetPerformance({ stockId }),
-    enabled: !!stockId,
   });
 
   const handleAutoCompleteOnChange: ComponentProps<
     typeof StockIdAutocomplete
-  >["onChange"] = (event, value) => {
+  >["onChange"] = (_, value) => {
     if (value != null) {
-      navigate(`/ticker-overview/${value.stockId}`);
+      navigate(getTickerOverviewPath(value.stockId));
     } else {
-      navigate(`/ticker-overview/`);
+      navigate(getTickerOverviewPath());
     }
   };
-
-  React.useEffect(() => {
-    if (nav2StockId) {
-      navigate(`/ticker-overview/${nav2StockId ?? ""}`);
-    }
-  }, [nav2StockId]);
 
   const options: ComponentProps<typeof Line>["options"] = {
     responsive: true,
@@ -134,76 +126,11 @@ export function MStockOverview() {
               sx={{ alignContent: "start" }}
             >
               <Grid size={{ xs: 12 }}>
-                {stockId !== "" && dataPerf !== undefined && (
-                  <DefaultPaper>
-                    <Typography variant="h6" gutterBottom>
-                      Ticker Info
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {dataPerf.stock.stockId}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {dataPerf.stock.stockName}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      Asset Class: {dataPerf.stock.assetClass}
-                    </Typography>
-
-                    {dataPerf.stock.assetClass === "BOND" && (
-                      <>
-                        <Typography variant="body1" gutterBottom>
-                          Maturity Date: {dataPerf.stock.maturityDate}
-                        </Typography>
-                        <Typography variant="body1" gutterBottom>
-                          Coupon: {dataPerf.stock.coupon}%
-                        </Typography>
-                        <Typography variant="body1" gutterBottom>
-                          Coupon Freq: {dataPerf.stock.couponFreq}
-                        </Typography>
-                        <Typography variant="body1" gutterBottom>
-                          Face Value: {dataPerf.stock.faceValue}
-                        </Typography>
-                      </>
-                    )}
-                  </DefaultPaper>
-                )}
+                <TickerInfo stockId={stockId} />
               </Grid>
 
               <Grid size={{ xs: 12 }}>
-                {stockId !== "" && dataPerf !== undefined && (
-                  <DefaultPaper>
-                    <Typography variant="h6" gutterBottom>
-                      Performance
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      From Top:{" "}
-                      {utils.getFmtSgnDec(dataPerf?.dropFromTop, 2, "", "%")}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      YTD: {utils.getFmtSgnDec(dataPerf?.ytd, 2, "", "%")}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      1-Month:{" "}
-                      {utils.getFmtSgnDec(dataPerf?.oneMonth, 2, "", "%")}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      3-Month:{" "}
-                      {utils.getFmtSgnDec(dataPerf?.threeMonth, 2, "", "%")}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      1-Year:{" "}
-                      {utils.getFmtSgnDec(dataPerf?.oneYear, 2, "", "%")}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      3-Year:{" "}
-                      {utils.getFmtSgnDec(dataPerf?.threeYear, 2, "", "%")}
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      5-Year:{" "}
-                      {utils.getFmtSgnDec(dataPerf?.fiveYear, 2, "", "%")}
-                    </Typography>
-                  </DefaultPaper>
-                )}
+                <TickerPerformance stockId={stockId} />
               </Grid>
             </Grid>
           )}

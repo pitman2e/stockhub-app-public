@@ -1,100 +1,77 @@
 import { IStockPortfolio } from "../types/db";
-import { IPortfoliosSummary } from "../types/api";
+import { IPortfoliosSummary, IPositionChartData } from "../types/api";
 import { IStockPositionValue } from "../types/api";
-import utils from "../utils/utils";
+import { createApiRequest, getApiQueryString, getApiRoute } from "./apiRequest";
 
 export default class repoPortfolio {
-    static readonly baseUrl = "api/Portfolio";
+  static readonly baseUrl = "api/Portfolio";
 
-    static Post() {
-        const baseUrl = repoPortfolio.baseUrl;
+  static Post() {
+    const baseUrl = repoPortfolio.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('POST', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-        }
-    }
+    return createApiRequest(baseUrl, baseUrl, "POST");
+  }
 
-    static Put() {
-        const baseUrl = repoPortfolio.baseUrl;
+  static Put() {
+    const baseUrl = repoPortfolio.baseUrl;
 
-        return {
-            requestFn: (content: any) => utils.requestWithToken('PUT', baseUrl, content),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-        }
-    }
+    return createApiRequest(baseUrl, baseUrl, "PUT");
+  }
 
-    static Get() {
-        const url = repoPortfolio.baseUrl;
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl, url }),
-            queryFn: utils.getReactQueryFn<IStockPortfolio[]>(url),
-        }
-    }
+  static Get() {
+    const url = repoPortfolio.baseUrl;
+    return createApiRequest<IStockPortfolio[]>(repoPortfolio.baseUrl, url);
+  }
 
-    static Delete(
-        {
-            portfolioId,
-        }: {
+  static Delete(
+    {
+      portfolioId,
+    }: {
             portfolioId: string;
         }
-    ) {
-        const baseUrl = repoPortfolio.baseUrl;
-        const url = baseUrl + "/" + utils.getQueryRoute(portfolioId);
-        return {
-            requestFn: () => utils.requestWithToken('DELETE', url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-        }
-    }
+  ) {
+    const baseUrl = repoPortfolio.baseUrl;
+    const url = baseUrl + "/" + getApiRoute(portfolioId);
+    return createApiRequest(baseUrl, url, "DELETE");
+  }
 
-    static GetSummary({ portfolioId, currency }: { portfolioId?: string | null, currency?: string | null } = {}) {
-        const baseUrl = repoPortfolio.baseUrl + "/Summary";
-        const url = baseUrl + "/" +
-            utils.getQueryRoute(portfolioId) + "?" +
-            utils.getQueryStringFromDict({ displayCurrency: currency });
+  static GetSummary({ portfolioId, currency }: { portfolioId?: string | null, currency?: string | null } = {}) {
+    const baseUrl = repoPortfolio.baseUrl + "/Summary";
+    const url = baseUrl + "/" +
+            getApiRoute(portfolioId) + "?" +
+            getApiQueryString({ displayCurrency: currency });
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl, url, portfolioId, currency }),
-            queryFn: utils.getReactQueryFn<IPortfoliosSummary>(url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-        }
-    }
+    return createApiRequest<IPortfoliosSummary>(repoPortfolio.baseUrl, url);
+  }
 
-    static GetPositions(
-        {
-            portfolioId,
-            posStatus,
-            sortBy,
-            isDesc,
-        }: {
-            portfolioId?: string | null | undefined,
+  static GetPositions(
+    {
+      portfolioId,
+      posStatus,
+      sortBy,
+      isDesc,
+    }: {
+            portfolioId?: string | null,
             posStatus?: string | null,
             sortBy?: string | null,
             isDesc?: boolean | null,
         } = {}) {
-        const baseUrl = repoPortfolio.baseUrl + "/Positions";
-        const url = baseUrl + "/" +
-            utils.getQueryRoute(portfolioId) + "?" +
-            utils.getQueryStringFromDict({ posStatus, sortBy, isDesc })
+    const baseUrl = repoPortfolio.baseUrl + "/Positions";
+    const url = baseUrl + "/" +
+            getApiRoute(portfolioId) + "?" +
+            getApiQueryString({ posStatus, sortBy, isDesc })
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl, url, portfolioId, posStatus, sortBy, isDesc }),
-            queryFn: utils.getReactQueryFn<IStockPositionValue[]>(url),
-            invalidateQueryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl }),
-        }
-    }
+    return createApiRequest<IStockPositionValue[]>(repoPortfolio.baseUrl, url);
+  }
 
-    static GetPositionChart(
-        {
-            portfolioId,
-            stockId,
-            dayRes,
-            fmDate,
-            toDate,
-        }: {
+  static GetPositionChart(
+    {
+      portfolioId,
+      stockId,
+      dayRes,
+      fmDate,
+      toDate,
+    }: {
             portfolioId?: string,
             stockId?: string,
             dayRes?: number,
@@ -102,15 +79,11 @@ export default class repoPortfolio {
             toDate: number,
         }) {
 
-        const baseUrl = repoPortfolio.baseUrl + "/PositionChart";
-        const url = baseUrl +
+    const baseUrl = repoPortfolio.baseUrl + "/PositionChart";
+    const url = baseUrl +
             "?" +
-            utils.getQueryStringFromDict({ portfolioId, stockId, dayRes, fmDate, toDate })
+            getApiQueryString({ portfolioId, stockId, dayRes, fmDate, toDate })
 
-        return {
-            ...utils.reactQueryDefaults,
-            queryKey: utils.getUserQueryKey({ baseUrl: repoPortfolio.baseUrl, url, portfolioId, stockId, dayRes, fmDate, toDate }),
-            queryFn: utils.getReactQueryFn(url),
-        }
-    }
+    return createApiRequest<IPositionChartData>(repoPortfolio.baseUrl, url);
+  }
 }

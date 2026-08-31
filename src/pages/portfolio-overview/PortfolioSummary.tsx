@@ -9,10 +9,11 @@ import {
 } from "../../components/DefaultComponents";
 import repoPortfolio from "../../repo/repoPortfolio";
 import { IStockSummary } from "../../types/api";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 interface IPortfolioSummaryProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
   isForcedSummary?: boolean;
 }
 
@@ -21,7 +22,7 @@ export function PortfolioSummary({
   isForcedSummary,
 }: IPortfolioSummaryProps) {
   const { isSuccess, isError, data, isFetching } = useQuery(
-    repoPortfolio.GetSummary({ portfolioId: portfolioId }),
+    ApiRequestAdapter.queryOptions(repoPortfolio.GetSummary({ portfolioId: portfolioId })),
   );
 
   if (isError)
@@ -40,7 +41,7 @@ export function PortfolioSummary({
   return (
     <>
       {isFetching && <DefaultLinearProgress />}
-      <DefaultPaper key={d?.portfolioId}>
+      <DefaultPaper key={d?.portfolio.portfolioId}>
         <Grid container>
           <Grid container size={{ xs: 3 }}>
             <Grid size={{ xs: 12 }}>

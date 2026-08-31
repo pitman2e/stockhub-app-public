@@ -17,13 +17,17 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
 import { IChartJsDataSet } from "../../types/api";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
+import * as chartJsTouchUtils from "../../utils/chartJsTouchUtils";
 
 interface IRealisedDividendChartProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
   stockId: string;
 }
 
 type BarOptions = ComponentProps<typeof Bar>["options"];
+
+const clearTouchPlugin = chartJsTouchUtils.createClearTouchPlugin();
 
 export default function RealisedDividendChart({
   portfolioId,
@@ -39,7 +43,7 @@ export default function RealisedDividendChart({
   const theme = useTheme();
 
   const { isError, data, isFetching, isSuccess } = useQuery({
-    ...repoRealisedDividend.GetMonthlyChart(queryKeys),
+    ...ApiRequestAdapter.queryOptions(repoRealisedDividend.GetMonthlyChart(queryKeys)),
   });
 
   if (isError)
@@ -50,6 +54,7 @@ export default function RealisedDividendChart({
     );
 
   const options: BarOptions = {
+    events: [...chartJsTouchUtils.touchSafeChartEvents],
     responsive: true,
     maintainAspectRatio: true,
     backgroundColor: theme.palette.primary.main, //Point, Bar
@@ -118,6 +123,7 @@ export default function RealisedDividendChart({
                     datasets: data?.dailyRealisedDividendDatasets,
                   }}
                   options={options}
+                  plugins={[clearTouchPlugin]}
                 />
               )}
               {!isSuccess && <CircularProgress />}

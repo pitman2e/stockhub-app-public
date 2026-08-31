@@ -1,6 +1,6 @@
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 
 interface IGridDetailItemProps {
   netAmtColor: boolean;
