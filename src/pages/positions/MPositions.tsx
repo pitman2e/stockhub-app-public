@@ -3,7 +3,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import Grid from "@mui/material/Grid";
 import { PositionsTable } from "./PositionsTable";
 import { useParams } from "react-router-dom";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import {
   DefaultHeader,
   DefaultContainer,
@@ -26,7 +26,7 @@ export function MPositions() {
           <Grid size={{ xs: 12 }}>
             <PositionsTable
               portfolioId={portfolioId}
-              isShowPortfolioId={false}
+              isRealPortfolio={false}
             />
           </Grid>
         </Grid>

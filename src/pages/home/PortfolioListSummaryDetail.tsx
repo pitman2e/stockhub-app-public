@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import Grid from "@mui/material/Grid";
 import Typography from "@mui/material/Typography";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import Stack from "@mui/material/Stack";
 import { Link as RouterLink } from "react-router-dom";
 import Link from "@mui/material/Link";
@@ -23,7 +23,7 @@ export default function PortfolioListSummaryDetail({
     <Grid
       container
       sx={{ flexDirection: "column" }}
-      key={d.portfolioId}
+      key={d.portfolio.portfolioId}
       size={{ xs: 12 }}
     >
       <Grid container>
@@ -33,9 +33,9 @@ export default function PortfolioListSummaryDetail({
             color="inherit"
             underline="hover"
             variant="body1"
-            to={`/portfolio-overview/${d.portfolioId === "Summary" ? "" : d.portfolioId}`}
+            to={`/portfolio-overview/${d.portfolio.portfolioId === "Summary" ? "" : d.portfolio.portfolioId}`}
           >
-            {d.portfolioName}
+            {d.portfolio.name}
           </Link>
 
           <Typography component="p" variant="caption">
@@ -91,7 +91,7 @@ export default function PortfolioListSummaryDetail({
                 underline="hover"
                 variant="caption"
                 sx={utils.getColorClass(d.totalYtdGain)}
-                to={`/positions/${d.portfolioId === "Summary" ? "" : d.portfolioId}`}
+                to={`/positions/${d.portfolio.portfolioId === "Summary" ? "" : d.portfolio.portfolioId}`}
               >
                 {d.displayCurrency} {utils.getSignedDecimal(d.totalYtdGain, 2)}{" "}
                 {utils.getFmtSgnDec(d.totalYtdGainPercentage, 2, "(", "%)")}
@@ -107,7 +107,7 @@ export default function PortfolioListSummaryDetail({
           </Box>
         </Typography>
 
-        {d.isExcludedFromSummary && (
+        {d.portfolio.isExcludedFromSummary && (
           <Typography variant="caption">Excluded From Summary</Typography>
         )}
       </Stack>

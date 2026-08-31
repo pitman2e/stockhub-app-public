@@ -1,7 +1,7 @@
 import React from "react";
 import Grid from "@mui/material/Grid";
 import { ErrorBoundary } from "react-error-boundary";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import {
   DefaultContainer,
   DefaultErrorPlaceholder,

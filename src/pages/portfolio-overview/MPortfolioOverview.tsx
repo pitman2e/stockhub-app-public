@@ -5,7 +5,7 @@ import { PortfolioSummaryPieChart } from "./PortfolioSummaryPieChart";
 import { PositionsLineCharts } from "./PositionsLineCharts";
 import { useParams } from "react-router-dom";
 import { PortfolioSummary } from "./PortfolioSummary";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import {
   DefaultHeader,
   DefaultContainer,

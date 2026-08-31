@@ -7,7 +7,7 @@ import TableRow from "@mui/material/TableRow";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Grid from "@mui/material/Grid";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import Skeleton from "@mui/material/Skeleton";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -18,6 +18,7 @@ import {
 import ImminentErrorIcon from "../../components/ImminentErrorIcon";
 import StockTickerLink from "../../components/StockTickerLink";
 import repoStockPrice from "../../repo/repoStockPrice";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 import {
   createColumnHelper,
   tableFeatures,
@@ -40,7 +41,7 @@ const sxTableBodyHidLtRow = {
 
 export default function TopMover() {
   const { isLoading, isError, data, isFetching } = useQuery({
-    ...repoStockPrice.GetTopMovers({ topCnt: 5 }),
+    ...ApiRequestAdapter.queryOptions(repoStockPrice.GetTopMovers({ topCnt: 5 })),
     refetchInterval: 60000,
     refetchIntervalInBackground: true,
   });
@@ -55,17 +56,25 @@ export default function TopMover() {
 
   const columns = [
     columnHelper.display({ id: "ticker", header: "Rising (Percentage)" }),
-    columnHelper.display({ id: "change", header: "Change" }),
+    columnHelper.display({
+      id: "change",
+      header: "Change",
+      meta: { align: "right" },
+    }),
   ];
   const risingTable = useTable({
     features: tableFeaturesConfig,
     columns,
     data: data?.byUpPercentage ?? [],
+    getRowId: (row) => [row.stockId].join("|"),
+
   });
   const fallingTable = useTable({
     features: tableFeaturesConfig,
     columns,
     data: data?.byDownPercentage ?? [],
+    getRowId: (row) => [row.stockId].join("|"),
+
   });
 
   return (
@@ -97,9 +106,7 @@ export default function TopMover() {
                       {headerGroup.headers.map((header) => (
                         <TableCell
                           key={header.id}
-                          align={
-                            header.column.id === "change" ? "right" : undefined
-                          }
+                          align={header.column.columnDef.meta?.align}
                         >
                           {header.isPlaceholder ? null : (
                             <risingTable.FlexRender header={header} />
@@ -111,10 +118,10 @@ export default function TopMover() {
                 </TableHead>
 
                 {isLoading && (
-                  <TableBody>
+                  <TableBody sx={sxTableBodyHidLtRow}>
                     {[...Array(3).keys()].map((i) => (
                       <TableRow key={i}>
-                        <TableCell component="th" scope="row">
+                        <TableCell>
                           <Typography variant="body2" component="p">
                             <Skeleton />
                           </Typography>
@@ -187,10 +194,10 @@ export default function TopMover() {
                 </TableHead>
 
                 {isLoading && (
-                  <TableBody>
+                  <TableBody sx={sxTableBodyHidLtRow}>
                     {[...Array(3).keys()].map((i) => (
                       <TableRow key={i}>
-                        <TableCell component="th" scope="row">
+                        <TableCell>
                           <Typography variant="body1" component="p">
                             <Skeleton />
                           </Typography>

@@ -1,215 +1,120 @@
-import { getAuth } from 'firebase/auth';
 import sxStyles from '../ui/sxStyles';
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import { AxiosError, isAxiosError } from 'axios';
 import { FieldValues, Path, UseFormSetError } from 'react-hook-form';
-import { IApiActionResult, IHookError, IProblemDetails } from '../types/api';
-import { jwtDecode } from 'jwt-decode';
-import { API_URL, DEMO_JWT } from './config';
+import { IApiActionResult, IHookError } from '../types/api';
+import { getJwtSub } from './apiClient';
 
-const {
-  VITE_API_URL,
-  VITE_DEMO_JWT
-} = import.meta.env;
+type CamelCase<S extends string> = S extends `${infer T}_${infer U}`
+  ? `${Lowercase<T>}${Capitalize<CamelCase<U>>}`
+  : Lowercase<S>;
 
-export default class utils {
-  static getFullUrl(url: string) {
-    let api_url = API_URL || VITE_API_URL || "";
+export function getUserQueryKey(key: Record<string, string | number | undefined | boolean | null> = {}) {
+  const uid = getJwtSub();
 
-    if (api_url && !api_url.endsWith("/")) {
-      api_url += "/";
+  const cleanedKey = Object.fromEntries(
+    Object.entries(key).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+  );
+  return [uid, cleanedKey];
+}
+
+export function getQueryStringFromDict(obj: Record<string, string | number | boolean | undefined | null>) {
+  const str = [];
+  for (const p in obj)
+    if (Object.prototype.hasOwnProperty.call(obj, p) && obj[p] !== undefined && obj[p] !== null) {
+      str.push(encodeURIComponent(p) + "=" + encodeURIComponent(getString(obj[p])));
     }
+  return str.join("&");
+}
 
-    return api_url + url;
+export function getQueryRoute(...obj: (string | undefined | null)[]) {
+  const str = [];
+  for (const p in obj) {
+    if (getString(p) === "") {
+      break;
+    }
+    str.push(encodeURIComponent(getString(obj[p])));
+  }
+  return str.join("/");
+}
+
+export function getDocumentTitle(title: string) {
+  return title + " - Stock Hub";
+}
+
+export function getString(text: string | number | boolean | undefined | null): string {
+  if (text === undefined || text === null) {
+    return "";
   }
 
-  static getDemoJwt = (): string => DEMO_JWT || VITE_DEMO_JWT || "";
-
-  static getUserQueryKey(key: Record<string, string | number | undefined | boolean | null> = {}) {
-    let uid: string;
-    let demo_jwt = utils.getDemoJwt();
-
-    if (!!demo_jwt) {
-      uid = this.getJwtSub(demo_jwt);
-    } else {
-      const currentUser = getAuth().currentUser;
-      if (currentUser === null) {
-        throw Error("Failed to obtain Current User from Firebase API")
-      }
-      uid = currentUser.uid
-    }
-
-    const cleanedKey = Object.fromEntries(
-      Object.entries(key).filter(([_, value]) => value !== null && value !== undefined && value !== "")
-    )
-    return [uid, cleanedKey];
+  return text.toString();
+}
+export function getSignedDecimal(val: number | null | undefined, decimalPlaces: number, disablePosSign: boolean = false) {
+  if (val === null || val === undefined) {
+    return "";
   }
 
-  static async requestWithToken(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-    url: string,
-    jsonPayload?: any
-  ): Promise<AxiosResponse> {
-    let token: string;
-    let demo_jwt = utils.getDemoJwt();
+  return (val > 0 && !disablePosSign ? "+" : "") + val.toFixed(decimalPlaces);
+}
 
-    if (!!demo_jwt) {
-      token = demo_jwt;
-    } else {
-      const currentUser = getAuth().currentUser;
-      if (currentUser === null) {
-        throw Error("Failed to obtain Current User from Firebase API");
-      }
-      token = await currentUser.getIdToken();
-    }
+export function getFmtSgnDec(val: number | null | undefined, decimalPlaces: number, prefix: string, suffix: string, emptyPlaceHolder: string = "") {
+  const rtvTmp = getSignedDecimal(val, decimalPlaces, false);
+  if (rtvTmp === "") {
+    return emptyPlaceHolder;
+  } else {
+    return prefix + rtvTmp + suffix;
+  }
+}
 
-    const config = {
-      method: method,
-      url: this.getFullUrl(url),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      data: jsonPayload
-    };
+export function getFmtDec(val: number | null | undefined, decimalPlaces: number, prefix: string, suffix: string, emptyPlaceHolder: string) {
+  let rtvTmp;
 
-    return axios(config);
+  if (val === null || val === undefined) {
+    rtvTmp = "";
+  } else {
+    rtvTmp = val.toFixed(decimalPlaces);
   }
 
-  static getQueryStringFromDict(obj: Record<string, string | number | boolean | undefined | null>) {
-    const str = [];
-    for (const p in obj)
-      if (Object.prototype.hasOwnProperty.call(obj, p) && obj[p] !== undefined && obj[p] !== null) {
-        str.push(encodeURIComponent(p) + "=" + encodeURIComponent(this.getString(obj[p])));
-      }
-    return str.join("&");
+  if (rtvTmp === "") {
+    return emptyPlaceHolder;
+  } else {
+    return prefix + rtvTmp + suffix;
   }
+}
 
-  static getQueryRoute(...obj: (string | undefined | null)[]) {
-    const str = [];
-    for (const p in obj) {
-      if (this.getString(p) === "") {
-        break;
-      }
-      str.push(encodeURIComponent(this.getString(obj[p])));
-    }
-    return str.join("/");
-  }
-
-  static getDocumentTitle(title: string) {
-    return title + " - Stock Hub";
-  }
-
-  static getString(text: string | number | boolean | undefined | null): string {
-    if (text === undefined || text === null) {
-      return ""
-    }
-
-    return text.toString();
-  }
-
-  static getSignedDecimal(val: number | null | undefined, decimalPlaces: number, disablePosSign: boolean = false) {
-    if (val === null || val === undefined) {
-      return "";
-    }
-
-    return (val > 0 && !disablePosSign ? "+" : "") + val.toFixed(decimalPlaces);
-  }
-
-  static getFmtSgnDec(val: number | null | undefined, decimalPlaces: number, prefix: string, suffix: string, emptyPlaceHolder: string = "") {
-    const rtvTmp = this.getSignedDecimal(val, decimalPlaces, false);
-    if (rtvTmp === "") {
-      return emptyPlaceHolder;
-    } else {
-      return prefix + rtvTmp + suffix;
-    }
-  }
-
-  static getFmtDec(val: number | undefined, decimalPlaces: number, prefix: string, suffix: string, emptyPlaceHolder: string) {
-    let rtvTmp;
-
-    if (val === null || val === undefined) {
-      rtvTmp = "";
-    } else {
-      rtvTmp = val.toFixed(decimalPlaces);
-    }
-
-    if (rtvTmp === "") {
-      return emptyPlaceHolder;
-    } else {
-      return prefix + rtvTmp + suffix;
-    }
-  }
-
-  static getReactQueryFn<T = any>(url: string): () => Promise<T> {
-    return async () => {
-      const response = await utils.requestWithToken('GET', url, {});
-      const apiResult = await response.data;
-      if (response.status === 200) {
-        return apiResult.payload as T;
-      } else {
-        throw apiResult as T;
-      }
-    }
-  }
-
-  static getColorClass = (amount: number | null | undefined) => {
-    if (amount === undefined || amount === null || amount === 0) {
-      return null;
-    }
-    if (amount > 0) {
-      return sxStyles.deltaUp;
-    }
-    else if (amount < 0) {
-      return sxStyles.deltaDown;
-    }
-
+export const getColorClass = (amount: number | null | undefined) => {
+  if (amount === undefined || amount === null || amount === 0) {
     return null;
   }
-
-  static reactQueryDefaults: {
-    refetchOnWindowFocus: boolean,
-    refetchInterval: false,
-    retry: (failureCount: number, error: any) => boolean
-  } = {
-      refetchOnWindowFocus: false,
-      refetchInterval: false,
-      retry: (failureCount: number, error: any): boolean => {
-        //Error is the response object from the server
-        //Does not have a status code
-        if (error.status === 400 || !error.isSuccess) {
-          return false;
-        }
-
-        //Total query count will be 4, 1st is the original query, 3 retries
-        return failureCount < 3;
-      },
-    }
-
-  static round2Dec(inp: number, decPlace: number): number {
-    const decPlace10 = Math.pow(10, decPlace)
-    return Math.round((inp + Number.EPSILON) * decPlace10) / decPlace10
+  if (amount > 0) {
+    return sxStyles.deltaUp;
+  }
+  else if (amount < 0) {
+    return sxStyles.deltaDown;
   }
 
-  static getErrorMessage(err: IApiActionResult<any>) {
-    if (err?.message) {
-      return err.message;
-    }
+  return null;
+}
 
-    if (err?.hookErrors?.length) {
-      return err.hookErrors
-        .map((e) => `${e.message} (${e.fieldName})`)
-        .join('; ');
-    }
+export const reactQueryDefaults: {
+  refetchOnWindowFocus: boolean,
+  refetchInterval: false,
+  retry: (failureCount: number, error: Error) => boolean
+} = {
+  refetchOnWindowFocus: false,
+  refetchInterval: false,
+  retry: (_failureCount, _error): boolean => {
+    return false;
+  },
+}
 
-    return undefined
-  }
+export function round2Dec(inp: number, decPlace: number): number {
+  const decPlace10 = Math.pow(10, decPlace);
+  return Math.round((inp + Number.EPSILON) * decPlace10) / decPlace10;
+}
 
-  // TODO: Remove usage of any
-  static getApiErrorMessage(error: AxiosError<any>) {
-    const actionResult = error.response?.data as {
-      hookErrors?: IHookError<any>[];
-      message?: string;
-    } | undefined;
+export function getApiErrorMessage(error: Error) {
+  if (isAxiosError<{ hookErrors?: IHookError[]; message?: string }>(error)) {
+    const actionResult = error.response?.data;
 
     if (actionResult?.hookErrors?.length) {
       return actionResult.hookErrors
@@ -220,60 +125,83 @@ export default class utils {
     return actionResult?.message ?? error.message ?? "Server rejected input. Please verify";
   }
 
-  // TODO: Typing has no particular meaning?
-  static setFormErrorFromApiError<TFieldValues extends FieldValues>(
-    error: AxiosError<any>,
-    setError: UseFormSetError<TFieldValues>,
-  ) {
-    const actionResult = error.response?.data as {
-      hookErrors?: IHookError<TFieldValues>[];
-      message?: string;
-    } | undefined;
+  return error.message ?? "Server rejected input. Please verify";
+}
 
-    if (actionResult?.hookErrors?.length) {
-      actionResult.hookErrors.forEach((hookError) => {
-        setError(hookError.fieldName as Path<TFieldValues>, {
-          type: "manual",
-          message: hookError.message,
-        });
-      });
-    } else {
-      setError("genericErrorMsg" as Path<TFieldValues>, {
+export function setFormErrorFromApiError<TFieldValues extends FieldValues>(
+  error: AxiosError<IApiActionResult>,
+  setError: UseFormSetError<TFieldValues>,
+) {
+  const actionResult = error.response?.data;
+
+  if (actionResult?.hookErrors?.length) {
+    actionResult.hookErrors.forEach((hookError) => {
+      const camelCaseFieldName = toCamelCase(hookError.fieldName as string);
+      // Workaround API having thousands of way to not returning camelCase fieldName
+      if (camelCaseFieldName !== hookError.fieldName) {
+        console.warn(`Field name '${hookError.fieldName as string}' is not in camelCase. Using '${camelCaseFieldName}' instead.`);
+      }
+
+      setError(camelCaseFieldName as Path<TFieldValues>, {
         type: "manual",
-        message: utils.getApiErrorMessage(error),
+        message: hookError.message,
       });
-    }
+    });
+  } else {
+    setError("genericErrorMsg" as Path<TFieldValues>, {
+      type: "manual",
+      message: getApiErrorMessage(error),
+    });
+  }
+}
+
+export function getEmptyRowsCountForLastPage({
+  pageIndex,
+  pageSize,
+  rowCount,
+  currentPageRowCount,
+}: {
+  pageIndex: number;
+  pageSize: number;
+  rowCount: number;
+  currentPageRowCount: number;
+}) {
+  if (pageIndex <= 0 || rowCount === 0) {
+    return 0;
   }
 
-  static isDemoMode() {
-    return !!utils.getDemoJwt();
+  const lastPageIndex = Math.ceil(rowCount / pageSize) - 1;
+  if (pageIndex < lastPageIndex || currentPageRowCount >= pageSize) {
+    return 0;
   }
 
-  static getEmptyRowsCountForLastPage({
-    pageIndex,
-    pageSize,
-    rowCount,
-    currentPageRowCount,
-  }: {
-    pageIndex: number;
-    pageSize: number;
-    rowCount: number;
-    currentPageRowCount: number;
-  }) {
-    if (pageIndex <= 0 || rowCount === 0) {
-      return 0;
-    }
-
-    const lastPageIndex = Math.ceil(rowCount / pageSize) - 1;
-    if (pageIndex < lastPageIndex || currentPageRowCount >= pageSize) {
-      return 0;
-    }
-
-    return pageSize - currentPageRowCount;
+  return pageSize - currentPageRowCount;
+}
+export function toCamelCase<S extends string>(str: S): CamelCase<S> {
+  if (str === "") {
+    return "" as CamelCase<S>;
   }
 
-  static getJwtSub(token: string): string {
-    const decoded = jwtDecode<{ sub: string }>(token);
-    return decoded.sub;
+  if (!str.includes("_")) {
+    return /^[A-Z0-9]+$/.test(str) ? str.toLowerCase() as CamelCase<S> : str as S & CamelCase<S>;
   }
+
+  const parts = str.split("_").filter(Boolean);
+  const camelCase = parts
+    .map((part, index) => {
+      const normalized = part.toLowerCase();
+
+      if (index === 0 && str.startsWith("_")) {
+        return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+      }
+
+      if (index === 0) {
+        return normalized;
+      }
+
+      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    })
+    .join("");
+
+  return (str.endsWith("_") ? `${camelCase}_` : camelCase) as CamelCase<S>;
 }

@@ -1,6 +1,6 @@
 import Grid from "@mui/material/Grid";
 import TextField from "@mui/material/TextField";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import repoTags from "../../repo/repoTags";
 import {
@@ -20,8 +20,9 @@ import {
   postSuccessMessage,
 } from "../../redux/snackbarSlice";
 import { useForm } from "react-hook-form";
-import { ITagCsvPostDto } from "../../types/api";
+import { IApiActionResult, ITagCsvPostDto } from "../../types/api";
 import { AxiosError } from "axios";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 interface IMTagsProps {
   category: string;
@@ -33,7 +34,7 @@ export function MTags({ category, onDialogClose }: IMTagsProps) {
   const queryClient = useQueryClient();
   const saveMutation = useMutation({
     mutationFn: async (dto: ITagCsvPostDto) => {
-      const postQuery = repoTags.Post();
+      const postQuery = ApiRequestAdapter.mutationOptions(repoTags.Post());
       return {
         response: await postQuery.requestFn(dto),
         invalidateQueryKey: postQuery.invalidateQueryKey,
@@ -44,17 +45,16 @@ export function MTags({ category, onDialogClose }: IMTagsProps) {
       dispatch(postSuccessMessage(""));
       onDialogClose();
     },
-    onError: (error: AxiosError<any>) => {
+    onError: (error: AxiosError<IApiActionResult>) => {
       dispatch(postErrorMessage(utils.getApiErrorMessage(error)));
     },
   });
-  const tagQuery = repoTags.Get({ category });
+  const tagQuery = ApiRequestAdapter.queryOptions(repoTags.Get({ category }));
   const { data, isError, isPending, isSuccess, error } = useQuery(tagQuery);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
   } = useForm<ITagCsvPostDto>({
     values: {
       category: category,
@@ -86,7 +86,7 @@ export function MTags({ category, onDialogClose }: IMTagsProps) {
       {isPending && <DefaultPaper>Loading</DefaultPaper>}
       {isError && (
         <DefaultPaper>
-          <DefaultErrorPlaceholder errorMsg={utils.getErrorMessage(error)} />
+          <DefaultErrorPlaceholder errorMsg={utils.getApiErrorMessage(error)} />
         </DefaultPaper>
       )}
       {isSuccess && (

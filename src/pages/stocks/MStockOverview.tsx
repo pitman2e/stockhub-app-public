@@ -2,7 +2,7 @@ import React, { ComponentProps, useState } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import StockIdAutocomplete from "../../components/StockIdAutocomplete";
 import { useParams, useNavigate } from "react-router-dom";
-import utils from "../../utils/utils";
+import * as utils from "../../utils/utils";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid";
@@ -25,13 +25,13 @@ import "chart.js/auto";
 import { Line } from "react-chartjs-2";
 import AssetClassSelect from "../../components/AssetClassSelect";
 import repoStockPrice from "../../repo/repoStockPrice";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 export function MStockOverview() {
   const navigate = useNavigate();
   const { portfolioId, stockId } = useParams();
   const [dateBack, setDateBack] = useState(6);
   const [assetClasses, setAssetClasses] = useState(["STOCK"]);
-  const [nav2StockId, setNav2StockId] = useState<string>("");
 
   React.useEffect(() => {
     document.title = utils.getDocumentTitle("Ticker Overview");
@@ -49,30 +49,24 @@ export function MStockOverview() {
   };
 
   const { data: dataChart, isFetching } = useQuery({
-    ...repoStockPrice.GetStockPricesChart(queryKeys),
+    ...ApiRequestAdapter.queryOptions(repoStockPrice.GetStockPricesChart(queryKeys)),
     enabled: Boolean(stockId),
   });
 
   const { data: dataPerf } = useQuery({
-    ...repoStockPrice.GetPerformance({ stockId }),
+    ...ApiRequestAdapter.queryOptions(repoStockPrice.GetPerformance({ stockId })),
     enabled: !!stockId,
   });
 
   const handleAutoCompleteOnChange: ComponentProps<
     typeof StockIdAutocomplete
-  >["onChange"] = (event, value) => {
+  >["onChange"] = (_, value) => {
     if (value != null) {
       navigate(`/ticker-overview/${value.stockId}`);
     } else {
       navigate(`/ticker-overview/`);
     }
   };
-
-  React.useEffect(() => {
-    if (nav2StockId) {
-      navigate(`/ticker-overview/${nav2StockId ?? ""}`);
-    }
-  }, [nav2StockId]);
 
   const options: ComponentProps<typeof Line>["options"] = {
     responsive: true,

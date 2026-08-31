@@ -16,24 +16,15 @@ import utc from "dayjs/plugin/utc";
 import CircularProgress from "@mui/material/CircularProgress";
 import { useTheme } from "@mui/material/styles";
 import repoPortfolio from "../../repo/repoPortfolio";
-import { IChartJsDataSet } from "../../types/api";
+import { IChartJsDataSet, IPositionChartData } from "../../types/api";
 import DateRangeSelector, {
   getPresetDates,
 } from "../../components/DateRangeSelector";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 interface IPositionsLineChartsProps {
   portfolioId?: string;
   stockId?: string;
-}
-
-interface IPositionChartData {
-  labels?: string[];
-  unrealisedDatasets: IChartJsDataSet[];
-  totalGainDatasets: IChartJsDataSet[];
-  totalGainOffsetDatasets: IChartJsDataSet[];
-  dailyGainDatasets: IChartJsDataSet[];
-  unrealisedCostDatasets: IChartJsDataSet[];
-  dailyRealisedDividendDatasets: IChartJsDataSet[];
 }
 
 type BarOptions = ComponentProps<typeof Bar>["options"];
@@ -68,7 +59,7 @@ export function PositionsLineCharts({
   };
 
   const { isError, data, isFetching, isSuccess } = useQuery<IPositionChartData>(
-    repoPortfolio.GetPositionChart(queryKeys),
+    ApiRequestAdapter.queryOptions(repoPortfolio.GetPositionChart(queryKeys)),
   );
 
   if (isError)

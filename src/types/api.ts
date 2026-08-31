@@ -1,123 +1,26 @@
-import { IBaseDto, IStock, IStockAssetClassType, IStockPosition, ITransactionType } from "./db";
+import { object, string, boolean, number, array, InferType } from 'yup';
+import {
+  IStockAssetClassType,
+  ITransactionType,
+  IBaseDtoSchema,
+  IStockSchema,
+  IStockPositionSchema,
+  IStockAssetClassTypeSchema,
+  ITransactionTypeSchema,
+  IStockPortfolioSchema,
+} from './db';
 
-export interface IHookError<T> {
-  fieldName: keyof T;
+export interface IHookError {
+  fieldName: string;
   message: string;
 }
 
-export interface IApiActionResult<T> {
+export interface IApiActionResult<T = undefined> {
   isSuccess: boolean;
   message: string;
   timestamp: number;
-  hookErrors: IHookError<keyof T>[];
+  hookErrors: IHookError[];
   payload: T;
-}
-
-export interface IStockMovements {
-  watchlists: IStockMovement[];
-}
-
-export interface IWatchlistDeleteDto {
-  stockId: string;
-}
-
-export interface IWatchlistPostDto {
-  stockId: string;
-  priority: number;
-}
-
-export interface IStockMovement {
-  stockName: string;
-  stockId: string;
-  price: number;
-  priceChange: number;
-  priceChangePercentage: number
-}
-
-export interface IStockTopMovers {
-  byUpPercentage: IStockMovement[];
-  byDownPercentage: IStockMovement[];
-}
-
-export interface IChartJsDataSet {
-  data: number[];
-  customBackgroundColor: string[];
-  currency: string;
-}
-
-export interface IChartJsDataSets {
-  datasets: IChartJsDataSet[];
-  labels: string[];
-}
-
-export interface IPortfolioPostDto extends IBaseDto {
-  portfolioId: string;
-  portfolioName: string;
-  defaultCurrency: string;
-  isVirtual: boolean;
-  version: number;
-}
-
-export interface IStockPriceDataset {
-  data: number[];
-  fill: boolean;
-  label: string;
-}
-
-export interface IStockPriceDatasets {
-  stockPriceDatasets: IStockPriceDataset[]
-  labels: string[]
-}
-
-export interface IPerformance {
-  stock: IStock;
-  ytd: number | null;
-  oneYear: number | null;
-  threeYear: number | null;
-  fiveYear: number | null;
-  oneMonth: number | null;
-  threeMonth: number | null;
-  dropFromTop: number | null;
-}
-
-export interface IRealisedScripPutDto extends IBaseDto {
-  portfolioId: string;
-  dividendId: number;
-  scripReceived: number;
-  reinvestPrice: number | null;
-}
-
-interface ITransactionBaseDto extends IBaseDto {
-  iden: number;
-  portfolioId: string;
-  unitAmt: number | null;
-  txCount: number | null;
-  stockId: string;
-  txDate: string;
-  tranType: ITransactionType;
-  currency: string;
-  isTransfer: boolean;
-  stockName: string;
-  handlingFee?: number | null;
-  accruedInterest?: number | null;
-  tax?: number | null;
-  ytm?: number | null;
-  comment?: string | null;
-  version: number;
-
-  txAmount: number | null; //Not exist in API
-  isClone?: boolean | null; //Not exist in API
-}
-
-export type ITransactionPostDto = ITransactionBaseDto
-export type ITransactionPutDto = ITransactionBaseDto
-
-export interface IStockPositionValue extends IStockPosition {
-  stockName: string;
-  assetClass: IStockAssetClassType;
-  stockPrice: number | null;
-  dailyRealisedDividend: number;
-  currentGainPercentage: number | null;
 }
 
 export interface IPagedApiResult<T> {
@@ -127,68 +30,278 @@ export interface IPagedApiResult<T> {
   totalCount: number;
 }
 
-export interface IStockSummary {
-  portfolioId: string;
-  marketDate: string | null; /** Format: YYYY-MM-DD */
-  totalCost: number;
-  totalDividend: number;
-  totalRealisedAmount: number;
+export interface IPositionChartData {
+  labels?: string[];
+  unrealisedDatasets: IChartJsDataSet[];
+  totalGainDatasets: IChartJsDataSet[];
+  totalGainOffsetDatasets: IChartJsDataSet[];
+  dailyGainDatasets: IChartJsDataSet[];
+  unrealisedCostDatasets: IChartJsDataSet[];
+  dailyRealisedDividendDatasets: IChartJsDataSet[];
+}
+
+export const IWatchlistDeleteDtoSchema = object({
+  stockId: string().max(20).required(),
+});
+export type IWatchlistDeleteDto = InferType<typeof IWatchlistDeleteDtoSchema>;
+
+export const IWatchlistPostDtoSchema = object({
+  stockId: string().max(20).required(),
+  priority: number().required(),
+});
+export type IWatchlistPostDto = InferType<typeof IWatchlistPostDtoSchema>;
+
+export const IStockMovementSchema = object({
+  stockName: string().max(80).required(),
+  stockId: string().max(20).required(),
+  price: number().required(),
+  priceChange: number().required(),
+  priceChangePercentage: number().required(),
+});
+export type IStockMovement = InferType<typeof IStockMovementSchema>;
+
+export const IStockMovementsSchema = object({
+  watchlists: array(IStockMovementSchema).required(),
+});
+export type IStockMovements = InferType<typeof IStockMovementsSchema>;
+
+export const IStockTopMoversSchema = object({
+  byUpPercentage: array(IStockMovementSchema).required(),
+  byDownPercentage: array(IStockMovementSchema).required(),
+});
+export type IStockTopMovers = InferType<typeof IStockTopMoversSchema>;
+
+export const IChartJsDataSetSchema = object({
+  data: array(number().required()).required(),
+  customBackgroundColor: array(string().required()).required(),
+  currency: string().max(3).required(),
+});
+export type IChartJsDataSet = InferType<typeof IChartJsDataSetSchema>;
+
+export const IChartJsDataSetsSchema = object({
+  datasets: array(IChartJsDataSetSchema).required(),
+  labels: array(string().required()).required(),
+});
+export type IChartJsDataSets = InferType<typeof IChartJsDataSetsSchema>;
+
+export const IPortfolioPostDtoSchema = IBaseDtoSchema.concat(
+  object({
+    portfolioId: string().max(20).required(),
+    portfolioName: string().required(),
+    defaultCurrency: string().max(3).required(),
+    priority: number().required(),
+    isVirtual: boolean().required(),
+    version: number().required(),
+  })
+);
+export type IPortfolioPostDto = InferType<typeof IPortfolioPostDtoSchema>;
+
+export const IStockPriceDatasetSchema = object({
+  data: array(number().required()).required(),
+  fill: boolean().required(),
+  label: string().required(),
+});
+export type IStockPriceDataset = InferType<typeof IStockPriceDatasetSchema>;
+
+export const IStockPriceDatasetsSchema = object({
+  stockPriceDatasets: array(IStockPriceDatasetSchema).required(),
+  labels: array(string().required()).required(),
+});
+export type IStockPriceDatasets = InferType<typeof IStockPriceDatasetsSchema>;
+
+export const IPerformanceSchema = object({
+  stock: IStockSchema.required(),
+  ytd: number().nullable().defined(),
+  oneYear: number().nullable().defined(),
+  threeYear: number().nullable().defined(),
+  fiveYear: number().nullable().defined(),
+  oneMonth: number().nullable().defined(),
+  threeMonth: number().nullable().defined(),
+  dropFromTop: number().nullable().defined(),
+});
+export type IPerformance = InferType<typeof IPerformanceSchema>;
+
+export const IRealisedScripPutDtoSchema = IBaseDtoSchema.concat(
+  object({
+    portfolioId: string().max(20).required(),
+    dividendId: number().required(),
+    scripReceived: number().required(),
+    reinvestPrice: number().nullable().defined()
+      .transform((value, originalValue) =>
+        originalValue === "" ? null : value,
+      ),
+  })
+);
+export type IRealisedScripPutDto = InferType<typeof IRealisedScripPutDtoSchema>;
+
+export const ITransactionBaseDtoSchema = IBaseDtoSchema.concat(
+  object({
+    iden: number().required(),
+    portfolioId: string().max(20).required(),
+    unitAmt: number().nullable().defined(),
+    txCount: number().nullable().defined(),
+    stockId: string().max(20).required(),
+    txDate: string().required(),
+    tranType: ITransactionTypeSchema.required(),
+    isTransfer: boolean().required(),
+    handlingFee: number().nullable().optional()
+      .transform((value, originalValue) =>
+        originalValue === "" ? null : value,
+      ),
+    accruedInterest: number().nullable().optional()
+      .transform((value, originalValue) =>
+        originalValue === "" ? null : value,
+      ),
+    tax: number().nullable().optional()
+      .transform((value, originalValue) =>
+        originalValue === "" ? null : value,
+      ),
+    ytm: number().nullable().optional()
+      .transform((value, originalValue) =>
+        originalValue === "" ? null : value,
+      ),
+    comment: string().nullable().optional(),
+    version: number().required(),
+    txAmount: number().nullable().optional()
+      .transform((value, originalValue) =>
+        originalValue === "" ? null : value,
+      ), // Not exist in API
+  })
+);
+
+export const ITransactionPostDtoSchema = ITransactionBaseDtoSchema;
+export type ITransactionPostDto = InferType<typeof ITransactionPostDtoSchema>;
+
+export const ITransactionPutDtoSchema = ITransactionBaseDtoSchema;
+export type ITransactionPutDto = InferType<typeof ITransactionPutDtoSchema>;
+
+export const IStockPositionValueSchema = IStockPositionSchema.concat(
+  object({
+    stockName: string().max(80).required(),
+    assetClass: IStockAssetClassTypeSchema.required(),
+    stockPrice: number().nullable().defined(),
+    dailyRealisedDividend: number().required(),
+    currentGainPercentage: number().nullable().defined(),
+  })
+);
+export type IStockPositionValue = InferType<typeof IStockPositionValueSchema>;
+
+export const IStockSummarySchema = object({
+  portfolio: IStockPortfolioSchema.required(),
+  marketDate: string().nullable().defined(), /** Format: YYYY-MM-DD */
+  totalCost: number().required(),
+  totalDividend: number().required(),
+  totalRealisedAmount: number().required(),
 
   /** @deprecated No longer used at API */
-  totalUnrealisedGainPercentage?: number | null;
+  totalUnrealisedGainPercentage: number().nullable().optional(),
   /** @deprecated No longer used at API */
-  totalUnrealisedGain: number;
+  totalUnrealisedGain: number().required(),
 
-  curTxGainAmount: number;
-  curTxGainAmountLatest: number;
-  portfolioName: string;
-  curTxGainAmountPercentage: number | null;
-  curTxGainAmountLatestPercentage: number | null;
-  totalRealisedGain: number;
-  totalUnrealisedAmount: number;
-  displayCurrency: string;
-  totalGain: number;
-  totalGainPercentage: number | null;
-  totalRealisedGainPercentage: number | null;
-  totalYtdGain: number;
-  totalYtdGainPercentage: number | null;
-  portfolioCurrency: string;
-  totalUnrealisedAmountPrev: number;
-  totalUnrealisedCost: number;
-  totalRealisedCost: number;
-  isExcludedFromSummary: boolean;
-  isVirtual: boolean;
-  version: number;
-}
+  curTxGainAmount: number().required(),
+  curTxGainAmountLatest: number().required(),
+  curTxGainAmountPercentage: number().nullable().defined(),
+  curTxGainAmountLatestPercentage: number().nullable().defined(),
+  totalRealisedGain: number().required(),
+  totalUnrealisedAmount: number().required(),
+  displayCurrency: string().max(3).required(),
+  totalGain: number().required(),
+  totalGainPercentage: number().nullable().defined(),
+  totalRealisedGainPercentage: number().nullable().defined(),
+  totalYtdGain: number().required(),
+  totalYtdGainPercentage: number().nullable().defined(),
+  totalUnrealisedAmountPrev: number().required(),
+  totalUnrealisedCost: number().required(),
+  totalRealisedCost: number().required(),
+});
+export type IStockSummary = InferType<typeof IStockSummarySchema>;
 
-export interface IPortfoliosSummary {
-  summary: IStockSummary;
-  details: IStockSummary[];
-  closedDetails: IStockSummary[];
-  virtualPortfolioDetails: IStockSummary[];
-}
+export const IPortfoliosSummarySchema = object({
+  summary: IStockSummarySchema.required(),
+  details: array(IStockSummarySchema).required(),
+  closedDetails: array(IStockSummarySchema).required(),
+  virtualPortfolioDetails: array(IStockSummarySchema).required(),
+});
+export type IPortfoliosSummary = InferType<typeof IPortfoliosSummarySchema>;
 
-interface IStockBaseDto extends IBaseDto {
-  stockName: string;
-  currency: string;
-  assetClass: IStockAssetClassType;
-  coupon: string;
-  couponFreq: string;
-  maturityDate: string;
-  faceValue : string;
-}
+const IStockBaseDtoSchema = IBaseDtoSchema.concat(
+  object({
+    stockName: string().max(80).required(),
+    currency: string().max(3).required(),
+    assetClass: IStockAssetClassTypeSchema.required(),
+    coupon: number().nullable().optional(),
+    couponFreq: number().nullable().optional(),
+    maturityDate: string(),
+    faceValue: number().integer().min(-999999).max(999999).nullable().optional(),
+  })
+);
 
-export interface IStockPutDto extends IStockBaseDto {
-  key_stockId: string;
-  stockId: string;
-  version: number;
-}
+export const IStockPutDtoSchema = IStockBaseDtoSchema.concat(
+  object({
+    key_stockId: string().max(20).required(),
+    stockId: string().max(20).required(),
+    version: number().required(),
+  })
+);
+export type IStockPutDto = InferType<typeof IStockPutDtoSchema>;
 
-export interface IStockPostDto extends IStockBaseDto {
-  stockId: string;
-}
+export const IStockPostDtoSchema = IStockBaseDtoSchema.concat(
+  object({
+    stockId: string().max(20).required(),
+  })
+);
+export type IStockPostDto = InferType<typeof IStockPostDtoSchema>;
 
-export const txTypes: { display: string, value: ITransactionType }[] = [
+export const ITransactionGetDtoSchema = IBaseDtoSchema.concat(
+  object({
+    iden: number().required(),
+    portfolioId: string().max(20).required(),
+    unitAmt: number().required(),
+    txCount: number().required(),
+    stockId: string().max(20).required(),
+    txDate: string().required(),
+    tranType: ITransactionTypeSchema.required(),
+    currency: string().max(3).required(),
+    isTransfer: boolean().required(),
+    handlingFee: number().nullable().optional(),
+    accruedInterest: number().nullable().optional(),
+    tax: number().nullable().optional(),
+    ytm: number().nullable().optional(),
+    comment: string().nullable().optional(),
+    stockName: string().max(80).optional(),
+    version: number().required(),
+  })
+);
+export type ITransactionGetDto = InferType<typeof ITransactionGetDtoSchema>;
+
+export const IDividendPutDtoSchema = object({
+  dividendId: number().required(),
+  scripPrice: number().nullable().defined()
+    .transform((value, originalValue) =>
+      originalValue === "" ? null : value,
+    ),
+});
+export type IDividendPutDto = InferType<typeof IDividendPutDtoSchema>;
+
+export const ITagCsvPostDtoSchema = object({
+  category: string().required(),
+  csv: string().required(),
+});
+export type ITagCsvPostDto = InferType<typeof ITagCsvPostDtoSchema>;
+
+export const IProblemDetailsSchema = object({
+  type: string().optional(),
+  title: string().optional(),
+  status: number().optional(),
+  detail: string().optional(),
+  instance: string().optional(),
+});
+// Extends the inferred type to map the [key: string]: unknown dictionary safely
+export type IProblemDetails = InferType<typeof IProblemDetailsSchema> & {
+  [key: string]: unknown;
+};
+
+export const txTypes: { display: string; value: ITransactionType }[] = [
   { display: "Buy", value: "BUY" },
   { display: "Sell", value: "SELL" },
   { display: "Reinv", value: "REINV" },
@@ -196,12 +309,12 @@ export const txTypes: { display: string, value: ITransactionType }[] = [
   { display: "Cash", value: "CASH" },
 ];
 
-export const currencies: { display: string, value: string }[] = [
+export const currencies: { display: string; value: string }[] = [
   { display: "USD", value: "USD" },
   { display: "HKD", value: "HKD" },
 ];
 
-export const markets: { display: string, value: string }[] = [
+export const markets: { display: string; value: string }[] = [
   { display: "US", value: "US" },
   { display: "LSE", value: "LSE" },
   { display: "USBND", value: "USBND" },
@@ -213,46 +326,8 @@ export const markets: { display: string, value: string }[] = [
   { display: "MANU", value: "MANU" },
 ];
 
-export const assetClasses: { display: string, value: IStockAssetClassType }[] = [
+export const assetClasses: { display: string; value: IStockAssetClassType }[] = [
   { display: "Stock", value: "STOCK" },
   { display: "Bond", value: "BOND" },
   { display: "Manual", value: "MANUAL" },
 ];
-
-export interface ITransactionGetDto extends IBaseDto {
-  iden: number;
-  portfolioId: string;
-  unitAmt: number;
-  txCount: number;
-  stockId: string;
-  txDate: string;
-  tranType: ITransactionType;
-  currency: string;
-  isTransfer: boolean;
-  handlingFee?: number | null;
-  accruedInterest?: number | null;
-  tax?: number | null;
-  ytm?: number | null;
-  comment?: string | null;
-  stockName?: string;
-  version: number;
-}
-
-export interface IDividendPutDto {
-  dividendId: number;
-  scripPrice: number | null;
-}
-
-export interface ITagCsvPostDto {
-  category: string;
-  csv: string;
-}
-
-export interface IProblemDetails {
-  type?: string;
-  title?: string;
-  status?: number;
-  detail?: string;
-  instance?: string;
-  [key: string]: unknown; // Handles ASP.NET Core extension properties (e.g., traceId)
-}

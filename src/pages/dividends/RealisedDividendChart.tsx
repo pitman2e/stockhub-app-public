@@ -17,9 +17,10 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import Typography from "@mui/material/Typography";
 import { useTheme } from "@mui/material/styles";
 import { IChartJsDataSet } from "../../types/api";
+import ApiRequestAdapter from "../../adapters/apiRequestAdapter";
 
 interface IRealisedDividendChartProps {
-  portfolioId: string | undefined;
+  portfolioId?: string;
   stockId: string;
 }
 
@@ -39,7 +40,7 @@ export default function RealisedDividendChart({
   const theme = useTheme();
 
   const { isError, data, isFetching, isSuccess } = useQuery({
-    ...repoRealisedDividend.GetMonthlyChart(queryKeys),
+    ...ApiRequestAdapter.queryOptions(repoRealisedDividend.GetMonthlyChart(queryKeys)),
   });
 
   if (isError)
